@@ -1,0 +1,3 @@
+[submodule "memory-rs"]
+	path = memory-rs
+	url = git@github.com:etra0/memory-rs.git
