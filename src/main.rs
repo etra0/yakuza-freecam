@@ -15,18 +15,18 @@ unsafe fn shellcode() {
     lea r11,[rip+0x200-0x9];
     pushf
     push rax
-    mov eax, [r11+0x10]
+    mov eax, [r11-0x10]
     test eax, eax
     pop rax
     je not_zero
-    movaps xmm4,[r11+0x30]
+    movaps xmm4,[r11+0x40]
     movaps xmm5,[r11]
     movaps xmm6,[r11+0x20] // 0x220
 
 not_zero:
     movaps [r11],xmm5
     movaps [r11+0x20],xmm6
-    movaps [r11+0x30],xmm4 // camera rotation
+    movaps [r11+0x40],xmm4 // camera rotation
 
     popf
     pop r11
@@ -84,6 +84,7 @@ fn main() {
     let mut restart_mouse = false;
 
     let mut speed_scale = 1.;
+
     println!("
     INSTRUCTIONS:
 
@@ -100,10 +101,10 @@ fn main() {
 
     loop {
         if (capture_mouse & restart_mouse) {
-            unsafe { SetCursorPos(1024, 1024) };
+            unsafe { SetCursorPos(100, 100) };
             restart_mouse = !restart_mouse;
-            latest_x = 1024;
-            latest_y = 1024;
+            latest_x = 100;
+            latest_y = 100;
             continue;
         }
 
@@ -149,6 +150,7 @@ fn main() {
             if (GetAsyncKeyState(winuser::VK_RIGHT) as u32 & 0x8000) != 0 {
                 dp_sides = -0.1*speed_scale;
             }
+
         }
 
         let (r_cam_x, r_cam_z, r_cam_y) = calc_new_focus_point(r_cam_x,
@@ -171,9 +173,9 @@ fn main() {
             yakuza.write_value::<f32>(p_shellcode + 0x224, p_cam_y);
             yakuza.write_value::<f32>(p_shellcode + 0x228, p_cam_z);
 
-            yakuza.write_value::<f32>(p_shellcode + 0x230, 0.);
-            yakuza.write_value::<f32>(p_shellcode + 0x234, 1.);
-            yakuza.write_value::<f32>(p_shellcode + 0x238, 0.);
+            yakuza.write_value::<f32>(p_shellcode + 0x240, 0.);
+            yakuza.write_value::<f32>(p_shellcode + 0x244, 1.);
+            yakuza.write_value::<f32>(p_shellcode + 0x248, 0.);
         }
 
         latest_x = mouse_pos.x;
@@ -185,7 +187,7 @@ fn main() {
             if (GetAsyncKeyState(winuser::VK_PAUSE) as u32 & 0x8000) != 0 {
                 active = !active;
                 capture_mouse = active;
-                yakuza.write_value::<u32>(p_shellcode + 0x210, active as u32);
+                yakuza.write_value::<u32>(p_shellcode + 0x1F0, active as u32);
 
                 let c_status = if active { "Deattached" } else { "Attached" };
                 println!("status of camera: {}", c_status);
@@ -198,8 +200,11 @@ fn main() {
                 thread::sleep(Duration::from_millis(500));
             }
 
-            if GetAsyncKeyState(winuser::VK_DELETE) as u32 & 0x8000 != 0 {
+            if active & (GetAsyncKeyState(winuser::VK_DELETE) as u32 & 0x8000 != 0) {
                 capture_mouse = !capture_mouse;
+                let c_status = if !capture_mouse { "Deattached" } else { "Attached" };
+                println!("status of mouse: {}", c_status);
+                thread::sleep(Duration::from_millis(500));
             }
 
             if (GetAsyncKeyState(winuser::VK_PRIOR) as u32 & 0x8000) != 0 {
