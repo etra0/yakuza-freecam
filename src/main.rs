@@ -54,6 +54,10 @@ fn calc_new_focus_point(cam_x: f32, cam_z: f32,
     (r_cam_x, r_cam_z, r_cam_y)
 }
 
+fn read_bytes(game: &Process) {
+    let ending: [u8; 2] = [0x0, 0x0];
+    game.read_string_array(0x0, 0, &ending);
+}
 
 fn main() {
     let mut mouse_pos: POINT = POINT::default();
@@ -63,6 +67,9 @@ fn main() {
     let mut latest_y = 0;
 
     let yakuza = Process::new("Yakuza0.exe");
+
+    read_bytes(&yakuza);
+    return;
 
     let entry_point: usize = 0x18FD38;
 
