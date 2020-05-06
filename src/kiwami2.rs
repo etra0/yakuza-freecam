@@ -71,6 +71,10 @@ pub fn main() {
     // active, nop this
     let focal_length_f: Vec<u8> = vec![0xE8, 0x93, 0x0C, 0x00, 0x00];
 
+    // nop the setcursorpos inside the game
+    let set_cursor_call: Vec<u8> = vec![0xFF, 0x15, 0x47, 0x52, 0x4A, 0x00];
+    let set_cursor_call_offset = 0x1BA285B;
+
     // WIP: Pause the cinematics of the world.
     let pause_cinematic_original: Vec<u8> = vec![0xE8, 0x43, 0x56, 0x42, 0x00];
     let mut pause_world = false;
@@ -101,13 +105,13 @@ pub fn main() {
     ");
 
     loop {
-        // if (capture_mouse & restart_mouse) {
-        //     unsafe { SetCursorPos(INITIAL_POS, INITIAL_POS) };
-        //     restart_mouse = !restart_mouse;
-        //     latest_x = INITIAL_POS;
-        //     latest_y = INITIAL_POS;
-        //     continue;
-        // }
+        if (capture_mouse & restart_mouse) {
+            unsafe { SetCursorPos(INITIAL_POS, INITIAL_POS) };
+            restart_mouse = !restart_mouse;
+            latest_x = INITIAL_POS;
+            latest_y = INITIAL_POS;
+            continue;
+        }
 
         let start = Instant::now();
 
@@ -196,9 +200,17 @@ pub fn main() {
                 println!("status of camera: {}", c_status);
 
                 if active {
+                    // nop focal length change
                     yakuza.write_nops(0x1F016F8, 5);
+
+                    // nop set cursor pos
+                    yakuza.write_nops(set_cursor_call_offset,
+                        set_cursor_call.len());
                 } else {
                     yakuza.write_aob(0x1F016F8, &focal_length_f);
+
+                    yakuza.write_aob(set_cursor_call_offset,
+                        &set_cursor_call);
                 }
                 thread::sleep(Duration::from_millis(500));
             }
