@@ -14,4 +14,3 @@ winapi = { version = "0.3.8", features = ["winuser", "impl-default"] }
 
 [build-dependencies]
 winres = "0.1"
-

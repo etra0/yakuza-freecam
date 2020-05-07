@@ -6,6 +6,8 @@ use std::thread;
 use std::time::{Duration, Instant};
 use std::f32;
 
+const INITIAL_POS: i32 = 500;
+
 #[naked]
 unsafe fn shellcode() {
     llvm_asm!("
@@ -69,7 +71,9 @@ pub fn main() {
     let focal_length_f: Vec<u8> = vec![0xFF, 0x90, 0xF0, 0x01, 0x00, 0x00];
 
     // WIP: Pause the cinematics of the world.
-    let pause_cinematic_original: Vec<u8> = vec![0xE8, 0x43, 0x56, 0x42, 0x00];
+    let pause_cinematic_f: Vec<u8> = vec![0x41, 0x8A, 0x8E, 0xC9, 0x00, 0x00, 0x00];
+    let pause_cinematic_rep: Vec<u8> = vec![0xB1, 0x01, 0x90, 0x90, 0x90, 0x90, 0x90];
+    let pause_cinematic_offset = 0xB720DE;
     let mut pause_world = false;
 
     let p_shellcode = yakuza.inject_shellcode(entry_point, 5,
@@ -87,6 +91,7 @@ pub fn main() {
     INSTRUCTIONS:
 
     PAUSE - Activate/Deactivate Free Camera
+    END - Pause the cinematic
     DEL - Deattach Mouse
 
     UP, DOWN, LEFT, RIGHT - Move in the direction you're pointing
@@ -95,14 +100,17 @@ pub fn main() {
     WARNING: Once you deattach the camera (PAUSE), your mouse will be set in a fixed
     position, so in order to attach/deattach the mouse to the camera, you can
     press DEL
+
+    WARNING: If you're in freeroam and you stop hearing audio, it's probably
+    because you have the paused option activated, simply press END to deactivate it.
     ");
 
     loop {
         if (capture_mouse & restart_mouse) {
-            unsafe { SetCursorPos(100, 100) };
+            unsafe { SetCursorPos(INITIAL_POS, INITIAL_POS) };
             restart_mouse = !restart_mouse;
-            latest_x = 100;
-            latest_y = 100;
+            latest_x = INITIAL_POS;
+            latest_y = INITIAL_POS;
             continue;
         }
 
@@ -221,13 +229,13 @@ pub fn main() {
                 thread::sleep(Duration::from_millis(100));
             }
 
-            if (GetAsyncKeyState(winuser::VK_F2) as u32 & 0x8000) != 0 {
+            if (GetAsyncKeyState(winuser::VK_END) as u32 & 0x8000) != 0 {
                 pause_world = !pause_world;
                 println!("status of pausing: {}", pause_world);
                 if pause_world {
-                    yakuza.write_nops(0x427088, 5);
+                    yakuza.write_aob(pause_cinematic_offset, &pause_cinematic_rep);
                 } else {
-                    yakuza.write_aob(0x427088, &pause_cinematic_original);
+                    yakuza.write_aob(pause_cinematic_offset, &pause_cinematic_f);
                 }
                 thread::sleep(Duration::from_millis(500));
             }
