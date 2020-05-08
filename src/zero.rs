@@ -106,7 +106,7 @@ pub fn main() {
     ");
 
     loop {
-        if (capture_mouse & restart_mouse) {
+        if capture_mouse & restart_mouse {
             unsafe { SetCursorPos(INITIAL_POS, INITIAL_POS) };
             restart_mouse = !restart_mouse;
             latest_x = INITIAL_POS;

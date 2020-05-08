@@ -105,7 +105,7 @@ pub fn main() {
     ");
 
     loop {
-        if (capture_mouse & restart_mouse) {
+        if capture_mouse & restart_mouse {
             unsafe { SetCursorPos(INITIAL_POS, INITIAL_POS) };
             restart_mouse = !restart_mouse;
             latest_x = INITIAL_POS;
@@ -123,7 +123,6 @@ pub fn main() {
         let speed_x = ((mouse_pos.x - latest_x) as f32)/duration/100.;
         let speed_y = ((mouse_pos.y - latest_y) as f32)/duration/100.;
 
-        // println!("{} {}", speed_x, speed_y);
 
         // focus position
         let mut f_cam_x = yakuza.read_value::<f32>(p_shellcode + 0x200);
@@ -215,7 +214,8 @@ pub fn main() {
                 thread::sleep(Duration::from_millis(500));
             }
 
-            if active & (GetAsyncKeyState(winuser::VK_DELETE) as u32 & 0x8000 != 0) {
+            if active &
+                (GetAsyncKeyState(winuser::VK_DELETE) as u32 & 0x8000 != 0) {
                 capture_mouse = !capture_mouse;
                 let c_status = if !capture_mouse { "Deattached" } else { "Attached" };
                 println!("status of mouse: {}", c_status);
