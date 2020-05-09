@@ -2,6 +2,7 @@ use memory_rs::process::process_wrapper::Process;
 use winapi::um::winuser;
 use winapi::um::winuser::{GetCursorPos, SetCursorPos, GetAsyncKeyState};
 use winapi::shared::windef::{POINT};
+use std::io::{Error, ErrorKind};
 use std::thread;
 use std::time::{Duration, Instant};
 use std::f32;
@@ -60,15 +61,27 @@ fn calc_new_focus_point(cam_x: f32, cam_z: f32,
     (r_cam_x, r_cam_z, r_cam_y)
 }
 
-pub fn main() {
+pub fn main() -> Result<(), Error> {
     let mut mouse_pos: POINT = POINT::default();
 
     // latest mouse positions
     let mut latest_x = 0;
     let mut latest_y = 0;
 
-    let yakuza = Process::new("YakuzaKiwami2.exe");
+    let yakuza = Process::new("YakuzaKiwami2.exe").map_err(|err| {
+        if let Some(os_error) = err.raw_os_error() {
+            // OS Error 18 is ERROR_NO_MORE_FILES, which in this case indicates
+            // a matching process is not currently running on the system.
+            //
+            // We provide a slightly nicer error here, because this is the most
+            // common error we get, and let others fall through to be displayed
+            if os_error == 18 {
+                return Error::new(ErrorKind::NotFound, "Yakuza Kiwami 2 needs to be running");
+            }
+        }
 
+        err
+    })?;
 
     let entry_point: usize = 0x1F0222B;
 
