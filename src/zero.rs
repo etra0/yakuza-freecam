@@ -23,6 +23,11 @@ unsafe fn shellcode() {
     movaps xmm4,[r11+0x40]
     movaps xmm5,[r11]
     movaps xmm6,[r11+0x20] // 0x220
+    push rbx
+    mov rbx,[r11+0x60]
+    mov [rax+0xAC],rbx
+    pop rbx
+
 
 not_zero:
     movaps [r11],xmm5
@@ -82,7 +87,8 @@ pub fn main() -> Result<(), Error> {
 
     // function that changes the focal length of the cinematics, when
     // active, nop this
-    let focal_length_f: Vec<u8> = vec![0xFF, 0x90, 0xF0, 0x01, 0x00, 0x00];
+    let focal_length_f: Vec<u8> = vec![0xF3, 0x0F, 0x11, 0x89, 0xAC, 0x00, 0x00, 0x00];
+    let focal_length_offset = 0x187616;
 
     // WIP: Pause the cinematics of the world.
     let pause_cinematic_f: Vec<u8> = vec![0x41, 0x8A, 0x8E, 0xC9, 0x00, 0x00, 0x00];
@@ -100,6 +106,8 @@ pub fn main() -> Result<(), Error> {
     let mut restart_mouse = false;
 
     let mut speed_scale = 1.;
+
+    let mut fov = 0.83;
 
     println!("
     INSTRUCTIONS:
@@ -119,6 +127,8 @@ pub fn main() -> Result<(), Error> {
     because you have the paused option activated, simply press END to deactivate it.
     ");
 
+    // avoid fov jump
+    yakuza.write_value::<f32>(p_shellcode + 0x260, fov);
     loop {
         if capture_mouse & restart_mouse {
             unsafe { SetCursorPos(INITIAL_POS, INITIAL_POS) };
@@ -135,8 +145,8 @@ pub fn main() -> Result<(), Error> {
         unsafe { GetCursorPos(&mut mouse_pos) };
         let duration = start.elapsed().as_millis() as f32;
 
-        let speed_x = ((mouse_pos.x - latest_x) as f32)/duration/100.;
-        let speed_y = ((mouse_pos.y - latest_y) as f32)/duration/100.;
+        let speed_x = ((mouse_pos.x - latest_x) as f32)/duration/5./(40.-fov*10.);
+        let speed_y = ((mouse_pos.y - latest_y) as f32)/duration/5./(40.-fov*10.);
 
         // focus position
         let mut f_cam_x = yakuza.read_value::<f32>(p_shellcode + 0x200);
@@ -171,6 +181,12 @@ pub fn main() -> Result<(), Error> {
                 dp_sides = -0.1*speed_scale;
             }
 
+            if (GetAsyncKeyState(winuser::VK_F1) as u32 & 0x8000) != 0 {
+                fov += if fov < 3.13 { 0.01 } else { 0. };
+            }
+            if (GetAsyncKeyState(winuser::VK_F2) as u32 & 0x8000) != 0 {
+                fov -= if fov > 0.1 { 0.01 } else { 0. };
+            }
         }
 
         let (r_cam_x, r_cam_z, r_cam_y) = calc_new_focus_point(r_cam_x,
@@ -196,6 +212,8 @@ pub fn main() -> Result<(), Error> {
             yakuza.write_value::<f32>(p_shellcode + 0x240, 0.);
             yakuza.write_value::<f32>(p_shellcode + 0x244, 1.);
             yakuza.write_value::<f32>(p_shellcode + 0x248, 0.);
+
+            yakuza.write_value::<f32>(p_shellcode + 0x260, fov);
         }
 
         latest_x = mouse_pos.x;
@@ -213,9 +231,9 @@ pub fn main() -> Result<(), Error> {
                 println!("status of camera: {}", c_status);
 
                 if active {
-                    yakuza.write_nops(0x1F1840, 6);
+                    yakuza.write_nops(focal_length_offset, focal_length_f.len());
                 } else {
-                    yakuza.write_aob(0x1F1840, &focal_length_f);
+                    yakuza.write_aob(focal_length_offset, &focal_length_f);
                 }
                 thread::sleep(Duration::from_millis(500));
             }
