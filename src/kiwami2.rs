@@ -22,6 +22,11 @@ unsafe fn shellcode() {
     movaps xmm4,[r11+0x40] // rotation
     movaps xmm10,[r11] // focus
     movaps xmm12,[r11+0x20] // position
+    // FOV 
+    push rax
+    mov rax,[r11+0x60]
+    mov [rdx+0x58],rax
+    pop rax
 
 not_zero:
     movaps [r11],xmm10
@@ -69,7 +74,8 @@ pub fn main() {
 
     // function that changes the focal length of the cinematics, when
     // active, nop this
-    let focal_length_f: Vec<u8> = vec![0xE8, 0x93, 0x0C, 0x00, 0x00];
+    let focal_length_f: Vec<u8> = vec![0x89, 0x86, 0xB8, 0x00, 0x00, 0x00];
+    let focal_length_o = 0xB78D87;
 
     // nop the setcursorpos inside the game
     let set_cursor_call: Vec<u8> = vec![0xFF, 0x15, 0x47, 0x52, 0x4A, 0x00];
@@ -90,6 +96,8 @@ pub fn main() {
 
     let mut speed_scale = 1.;
 
+    let mut fov = 0.66;
+
     println!("
     INSTRUCTIONS:
 
@@ -98,12 +106,15 @@ pub fn main() {
 
     UP, DOWN, LEFT, RIGHT - Move in the direction you're pointing
     PG UP, PG DOWN - Increase/Decrease speed multiplier
+    F1, F2 - Increase/Decrease FOV respectively
 
     WARNING: Once you deattach the camera (PAUSE), your mouse will be set in a fixed
     position, so in order to attach/deattach the mouse to the camera, you can
     press DEL
     ");
 
+    // fill this value before the initialization
+    yakuza.write_value::<f32>(p_shellcode + 0x260, fov);
     loop {
         if capture_mouse & restart_mouse {
             unsafe { SetCursorPos(INITIAL_POS, INITIAL_POS) };
@@ -120,8 +131,8 @@ pub fn main() {
         unsafe { GetCursorPos(&mut mouse_pos) };
         let duration = start.elapsed().as_millis() as f32;
 
-        let speed_x = ((mouse_pos.x - latest_x) as f32)/duration/100.;
-        let speed_y = ((mouse_pos.y - latest_y) as f32)/duration/100.;
+        let speed_x = ((mouse_pos.x - latest_x) as f32)/duration/10./(40.-fov*10.);
+        let speed_y = ((mouse_pos.y - latest_y) as f32)/duration/10./(40.-fov*10.);
 
 
         // focus position
@@ -157,6 +168,13 @@ pub fn main() {
                 dp_sides = -0.1*speed_scale;
             }
 
+            if (GetAsyncKeyState(winuser::VK_F1) as u32 & 0x8000) != 0 {
+                fov += if fov < 3.13 { 0.01 } else { 0. };
+            }
+            if (GetAsyncKeyState(winuser::VK_F2) as u32 & 0x8000) != 0 {
+                fov -= if fov > 0.1 { 0.01 } else { 0. };
+            }
+
         }
 
         let (r_cam_x, r_cam_z, r_cam_y) = calc_new_focus_point(r_cam_x,
@@ -182,6 +200,9 @@ pub fn main() {
             yakuza.write_value::<f32>(p_shellcode + 0x240, 0.);
             yakuza.write_value::<f32>(p_shellcode + 0x244, 1.);
             yakuza.write_value::<f32>(p_shellcode + 0x248, 0.);
+
+            // fov
+            yakuza.write_value::<f32>(p_shellcode + 0x260, fov);
         }
 
         latest_x = mouse_pos.x;
@@ -200,13 +221,13 @@ pub fn main() {
 
                 if active {
                     // nop focal length change
-                    yakuza.write_nops(0x1F016F8, 5);
+                    yakuza.write_nops(focal_length_o, focal_length_f.len());
 
                     // nop set cursor pos
                     yakuza.write_nops(set_cursor_call_offset,
                         set_cursor_call.len());
                 } else {
-                    yakuza.write_aob(0x1F016F8, &focal_length_f);
+                    yakuza.write_aob(focal_length_o, &focal_length_f);
 
                     yakuza.write_aob(set_cursor_call_offset,
                         &set_cursor_call);
@@ -238,16 +259,16 @@ pub fn main() {
                 thread::sleep(Duration::from_millis(100));
             }
 
-            if (GetAsyncKeyState(winuser::VK_F2) as u32 & 0x8000) != 0 {
-                pause_world = !pause_world;
-                println!("status of pausing: {}", pause_world);
-                if pause_world {
-                    yakuza.write_nops(0x1F01703, 5);
-                } else {
-                    yakuza.write_aob(0x1F01703, &pause_cinematic_original);
-                }
-                thread::sleep(Duration::from_millis(500));
-            }
+            // if (GetAsyncKeyState(winuser::VK_F2) as u32 & 0x8000) != 0 {
+            //     pause_world = !pause_world;
+            //     println!("status of pausing: {}", pause_world);
+            //     if pause_world {
+            //         yakuza.write_nops(0x1F01703, 5);
+            //     } else {
+            //         yakuza.write_aob(0x1F01703, &pause_cinematic_original);
+            //     }
+            //     thread::sleep(Duration::from_millis(500));
+            // }
         }
     }
 }
