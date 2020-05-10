@@ -9,7 +9,9 @@ build = "build.rs"
 kiwami2 = []
 
 [dependencies]
+dont_disappear = "3.0.1"
 memory-rs = { path = ".\\memory-rs"}
+sysinfo = "0.14.1"
 winapi = { version = "0.3.8", features = ["winuser", "impl-default"] }
 
 [build-dependencies]
