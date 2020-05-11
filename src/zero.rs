@@ -118,6 +118,7 @@ pub fn main() -> Result<(), Error> {
 
     UP, DOWN, LEFT, RIGHT - Move in the direction you're pointing
     PG UP, PG DOWN - Increase/Decrease speed multiplier
+    F1, F2 - Increase/Decrease FOV respectively
 
     WARNING: Once you deattach the camera (PAUSE), your mouse will be set in a fixed
     position, so in order to attach/deattach the mouse to the camera, you can
