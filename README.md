@@ -3,6 +3,26 @@
 
 This is a revamped and rewritten camera tool for the Yakuza 0 game. It works in Cutscenes and freeroam.
 
+## Compilation
+Yakuza Zero:
+
+```
+cargo +nightly build --release
+```
+
+Yakuza Kiwami:
+
+```
+cargo +nightly build --features kiwami --release
+```
+
+Yakuza Kiwami 2:
+
+```
+cargo +nightly build --features kiwami2 --release
+```
+
+
 ## Usage
 
 The relevant game must be running before you run the free camera tool.

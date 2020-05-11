@@ -7,6 +7,7 @@ build = "build.rs"
 
 [features]
 kiwami2 = []
+kiwami = []
 
 [dependencies]
 memory-rs = { path = ".\\memory-rs"}

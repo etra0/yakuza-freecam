@@ -20,29 +20,37 @@ unsafe fn shellcode() {
     test eax, eax
     pop rax
     je not_zero
-    movaps xmm4,[r11+0x40]
-    movaps xmm5,[r11]
-    movaps xmm6,[r11+0x20] // 0x220
-    push rbx
-    mov rbx,[r11+0x60]
-    mov [rax+0xAC],rbx
-    pop rbx
+    // movaps xmm4,[r11+0x40]
+    movaps xmm1,[r11] // focus
+    movaps xmm0,[r11+0x20] // position
+    movaps xmm3,[r11+0x40] // rotation ?? 
+    movaps [rsp+0x88],xmm3
+    // fov stuff
+    push rax
+    mov rax,[r11+0x60]
+    mov [rbx+0xAC],rax
+    pop rax
 
 
 not_zero:
-    movaps [r11],xmm5
-    movaps [r11+0x20],xmm6
-    movaps [r11+0x40],xmm4 // camera rotation
-    
+    movaps [r11],xmm1
+    movaps [r11+0x20],xmm0
+    // load rotation
+    movaps xmm3,[rsp+0x88]
+    movaps [r11+0x40],xmm3 // camera rotation
+
     // load fov
-    push rbx
-    mov rbx,[rax+0xAC]
-    mov [r11+0x60],rbx
-    pop rbx
+    push rax
+    mov rax,[rbx+0xAC]
+    mov [r11+0x60],rax
+    pop rax
 
     popf
     pop r11
-    movaps [rsp+0x48],xmm4 // adjusted offset of stack pointer + 8
+    // original code
+    movaps [rbp-0x20],xmm1
+    movaps [rbp-0x30],xmm0
+    // end original code
     ret
     nop;nop;nop;nop;
     ": : : : "volatile", "intel");
@@ -74,7 +82,7 @@ pub fn main() -> Result<(), Error> {
     let mut latest_x = 0;
     let mut latest_y = 0;
 
-    let yakuza = Process::new("Yakuza0.exe").map_err(|err| {
+    let yakuza = Process::new("YakuzaKiwami.exe").map_err(|err| {
         if let Some(os_error) = err.raw_os_error() {
             // OS Error 18 is ERROR_NO_MORE_FILES, which in this case indicates
             // a matching process is not currently running on the system.
@@ -82,14 +90,15 @@ pub fn main() -> Result<(), Error> {
             // We provide a slightly nicer error here, because this is the most
             // common error we get, and let others fall through to be displayed
             if os_error == 18 {
-                return Error::new(ErrorKind::NotFound, "Yakuza 0 needs to be running");
+                return Error::new(ErrorKind::NotFound, "Yakuza Kiwami needs to be running");
             }
         }
 
         err
     })?;
 
-    let entry_point: usize = 0x18FD38;
+    let entry_point: usize = 0x30CC33;
+    let entry_point_size: usize = 8;
 
     // function that changes the focal length of the cinematics, when
     // active, nop this
@@ -97,14 +106,13 @@ pub fn main() -> Result<(), Error> {
     let focal_length_offset = 0x187616;
 
     // WIP: Pause the cinematics of the world.
-    let pause_cinematic_f: Vec<u8> = vec![0x41, 0x8A, 0x8E, 0xC9, 0x00, 0x00, 0x00];
+    let pause_cinematic_f: Vec<u8> = vec![0x41, 0x8A, 0x8D, 0xD1, 0x00, 0x00, 0x00];
     let pause_cinematic_rep: Vec<u8> = vec![0xB1, 0x01, 0x90, 0x90, 0x90, 0x90, 0x90];
-    let pause_cinematic_offset = 0xB720DE;
+    let pause_cinematic_offset = 0x7BB8C;
     let mut pause_world = false;
 
-    let p_shellcode = yakuza.inject_shellcode(entry_point, 5,
+    let p_shellcode = yakuza.inject_shellcode(entry_point, entry_point_size,
         shellcode as usize as *const u8);
-
 
     let mut active = false;
     let mut capture_mouse = false;
@@ -135,7 +143,6 @@ pub fn main() -> Result<(), Error> {
     ");
 
     // avoid fov jump
-    yakuza.write_value::<f32>(p_shellcode + 0x260, fov);
     loop {
         if capture_mouse & restart_mouse {
             unsafe { SetCursorPos(INITIAL_POS, INITIAL_POS) };
@@ -164,6 +171,8 @@ pub fn main() -> Result<(), Error> {
         let mut p_cam_x = yakuza.read_value::<f32>(p_shellcode + 0x220);
         let mut p_cam_y = yakuza.read_value::<f32>(p_shellcode + 0x224);
         let mut p_cam_z = yakuza.read_value::<f32>(p_shellcode + 0x228);
+
+        fov = yakuza.read_value::<f32>(p_shellcode + 0x260);
 
         // relative camera position
         let r_cam_x = f_cam_x - p_cam_x;

@@ -4,14 +4,20 @@
 #[cfg(feature = "kiwami2")]
 mod kiwami2;
 
-#[cfg(not(feature = "kiwami2"))]
+#[cfg(feature = "kiwami")]
+mod kiwami;
+
+#[cfg(all(not(feature = "kiwami2"), not(feature = "kiwami")))]
 mod zero;
 
 fn main() {
     #[cfg(feature = "kiwami2")]
     let result = kiwami2::main();
 
-    #[cfg(not(feature = "kiwami2"))]
+    #[cfg(feature = "kiwami")]
+    let result = kiwami::main();
+
+    #[cfg(all(not(feature = "kiwami2"), not(feature = "kiwami")))]
     let result = zero::main();
 
     // Slightly nicer way to print exit codes

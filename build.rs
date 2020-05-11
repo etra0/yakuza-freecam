@@ -3,11 +3,16 @@ extern crate winres;
 fn main() {
     if cfg!(target_os = "windows") {
         let mut res = winres::WindowsResource::new();
-        if cfg!(feature = "kiwami2") {
-            res.set_icon("kiwami2.ico");
-        } else {
-            res.set_icon("yakuza0.ico");
-        }
+
+        #[cfg(feature = "kiwami2")]
+        res.set_icon("assets\\kiwami2.ico");
+
+        #[cfg(feature = "kiwami")]
+        res.set_icon("assets\\kiwami.ico");
+
+        #[cfg(all(not(feature = "kiwami2"), not(feature = "kiwami")))]
+        res.set_icon("assets\\yakuza0.ico");
+
         res.compile().unwrap();
     }
 }
