@@ -253,14 +253,14 @@ pub fn main() -> Result<(), Error> {
             }
 
             if (GetAsyncKeyState(winuser::VK_PRIOR) as u32 & 0x8000) != 0 {
-                speed_scale += 0.1;
+                speed_scale *= 2.;
                 println!("Speed increased, {:.2}", speed_scale);
                 thread::sleep(Duration::from_millis(100));
             }
 
             if (GetAsyncKeyState(winuser::VK_NEXT) as u32 & 0x8000) != 0 {
-                if speed_scale > 0.1 {
-                    speed_scale -= 0.1;
+                if speed_scale > 1e-5 {
+                    speed_scale /= 2.;
                     println!("Speed decreased, {:.2}", speed_scale);
                 } else {
                     println!("Cannot be decreased, {:.2}", speed_scale);
