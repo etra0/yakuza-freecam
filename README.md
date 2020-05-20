@@ -14,6 +14,12 @@ Yakuza Kiwami 2:
 - You can release the camera in almost every place
 - You can pause in freeroam and in the cinematics (experimental)
 
+## Usage
+
+**The relevant game must be running before you run the free camera tool.**
+
+You should see a Command Prompt window with instructions. If one briefly flashes on the screen, or doesn't appear at all, you may need to open Command Prompt yourself and run it to see what went wrong.
+
 ## Compilation
 Yakuza Zero:
 
@@ -34,8 +40,3 @@ cargo +nightly build --features kiwami2 --release
 ```
 
 
-## Usage
-
-The relevant game must be running before you run the free camera tool.
-
-You should see a Command Prompt window with instructions. If one briefly flashes on the screen, or doesn't appear at all, you may need to open Command Prompt yourself and run it to see what went wrong.
