@@ -3,7 +3,16 @@
 
 ![Kiryu](https://i.imgur.com/s9Od0q4.jpg)
 
-This is a revamped and rewritten camera tool for the Yakuza 0 game. It works in Cutscenes and freeroam.
+This is a revamped and rewritten camera tool for the Yakuza 0, Kiwami and Kiwami 2. It works in Cutscenes and freeroam.
+
+## Features
+Yakuza 0 & Kiwami:
+- You can release the camera in almost every place
+- You can pause the cinematics and move the camera around
+
+Yakuza Kiwami 2:
+- You can release the camera in almost every place
+- You can pause in freeroam and in the cinematics (experimental)
 
 ## Compilation
 Yakuza Zero:
