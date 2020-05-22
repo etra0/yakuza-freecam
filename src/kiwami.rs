@@ -82,20 +82,16 @@ pub fn main() -> Result<(), Error> {
     let mut latest_x = 0;
     let mut latest_y = 0;
 
-    let yakuza = Process::new("YakuzaKiwami.exe").map_err(|err| {
-        if let Some(os_error) = err.raw_os_error() {
-            // OS Error 18 is ERROR_NO_MORE_FILES, which in this case indicates
-            // a matching process is not currently running on the system.
-            //
-            // We provide a slightly nicer error here, because this is the most
-            // common error we get, and let others fall through to be displayed
-            if os_error == 18 {
-                return Error::new(ErrorKind::NotFound, "Yakuza Kiwami needs to be running");
-            }
+    println!("Waiting for the game to start");
+    let yakuza = loop {
+        match Process::new("YakuzaKiwami.exe") {
+            Ok(p) => break p,
+            Err(_) => (),
         }
 
-        err
-    })?;
+        thread::sleep(Duration::from_secs(5));
+    };
+    println!("Game hooked");
 
     let entry_point: usize = 0x30CC33;
     let entry_point_size: usize = 8;
