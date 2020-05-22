@@ -47,10 +47,12 @@ not_zero:
 unsafe fn get_pause_value() {
     llvm_asm!("
     push rax
-    lea rax,[rbp+0x188]
+    lea rax,[rdi+0x188]
     mov [rip+0x200-0xF],rax
-    cmp byte ptr [rbp+0xD0],0
     pop rax
+
+    // original code
+    movzx eax,byte ptr [rdi+0x188]
     ret
     nop;nop;nop;nop;
     ": : : : "volatile", "intel");
@@ -124,7 +126,7 @@ pub fn main() -> Result<(), Error> {
         shellcode as usize as *const u8);
 
     // entry point
-    let pause_value_ep: usize = 0xDF6F7F;
+    let pause_value_ep: usize = 0xDF5E1B;
     let pause_value = yakuza.inject_shellcode(pause_value_ep, 7,
         get_pause_value as usize as *const u8);
 
