@@ -90,6 +90,24 @@ pub fn main() -> Result<(), Error> {
     let mut latest_x = 0;
     let mut latest_y = 0;
 
+    println!("
+    INSTRUCTIONS:
+
+    PAUSE - Activate/Deactivate Free Camera
+    END - Pause/Unpause World
+    DEL - Deattach Mouse
+
+    UP, DOWN, LEFT, RIGHT - Move in the direction you're pointing
+    PG UP, PG DOWN - Increase/Decrease speed multiplier
+    F1, F2 - Increase/Decrease FOV respectively
+
+    WARNING: Pause function is still experimental
+
+    WARNING: Once you deattach the camera (PAUSE), your mouse will be set in a fixed
+    position, so in order to attach/deattach the mouse to the camera, you can
+    press DEL
+    ");
+
     println!("Waiting for the game to start");
     let yakuza = loop {
         match Process::new("YakuzaKiwami2.exe") {
@@ -136,23 +154,6 @@ pub fn main() -> Result<(), Error> {
 
     let mut fov = 0.66;
 
-    println!("
-    INSTRUCTIONS:
-
-    PAUSE - Activate/Deactivate Free Camera
-    END - Pause/Unpause World
-    DEL - Deattach Mouse
-
-    UP, DOWN, LEFT, RIGHT - Move in the direction you're pointing
-    PG UP, PG DOWN - Increase/Decrease speed multiplier
-    F1, F2 - Increase/Decrease FOV respectively
-
-    WARNING: Pause function is still experimental
-
-    WARNING: Once you deattach the camera (PAUSE), your mouse will be set in a fixed
-    position, so in order to attach/deattach the mouse to the camera, you can
-    press DEL
-    ");
 
     // fill this value before the initialization
     yakuza.write_value::<f32>(p_shellcode + 0x260, fov);

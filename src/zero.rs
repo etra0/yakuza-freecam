@@ -74,6 +74,26 @@ pub fn main() -> Result<(), Error> {
     let mut latest_x = 0;
     let mut latest_y = 0;
 
+    println!("
+    INSTRUCTIONS:
+
+    PAUSE - Activate/Deactivate Free Camera
+    END - Pause the cinematic
+    DEL - Deattach Mouse
+
+    UP, DOWN, LEFT, RIGHT - Move in the direction you're pointing
+    PG UP, PG DOWN - Increase/Decrease speed multiplier
+    F1, F2 - Increase/Decrease FOV respectively
+
+    WARNING: Once you deattach the camera (PAUSE), your mouse will be set in a fixed
+    position, so in order to attach/deattach the mouse to the camera, you can
+    press DEL
+
+    WARNING: If you're in freeroam and you stop hearing audio, it's probably
+    because you have the paused option activated, simply press END to deactivate it.
+
+    ");
+
     println!("Waiting for the game to start");
     let yakuza = loop {
         match Process::new("Yakuza0.exe") {
@@ -111,24 +131,6 @@ pub fn main() -> Result<(), Error> {
 
     let mut fov = 0.83;
 
-    println!("
-    INSTRUCTIONS:
-
-    PAUSE - Activate/Deactivate Free Camera
-    END - Pause the cinematic
-    DEL - Deattach Mouse
-
-    UP, DOWN, LEFT, RIGHT - Move in the direction you're pointing
-    PG UP, PG DOWN - Increase/Decrease speed multiplier
-    F1, F2 - Increase/Decrease FOV respectively
-
-    WARNING: Once you deattach the camera (PAUSE), your mouse will be set in a fixed
-    position, so in order to attach/deattach the mouse to the camera, you can
-    press DEL
-
-    WARNING: If you're in freeroam and you stop hearing audio, it's probably
-    because you have the paused option activated, simply press END to deactivate it.
-    ");
 
     // avoid fov jump
     yakuza.write_value::<f32>(p_shellcode + 0x260, fov);
