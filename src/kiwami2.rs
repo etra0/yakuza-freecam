@@ -58,21 +58,6 @@ unsafe fn get_pause_value() {
     ": : : : "volatile", "intel");
 }
 
-#[naked]
-unsafe fn get_ui_flag() {
-    llvm_asm!("
-    push rcx
-    lea rcx,[rax+0xC8]
-    mov [rip+0x200-0xF],rcx //0xF is the RIP relative progress until this instruction
-    pop rcx
-
-    // original code
-    cmp dword ptr [rax + 0xC8],0x02
-    ret
-    nop;nop;nop;nop;
-    ": : : : "volatile", "intel");
-}
-
 fn trigger_pause(process: &Process, addr: usize) {
     if addr == 0x0 { return; }
     process.write_value::<u8>(addr, 0x1);
@@ -109,6 +94,7 @@ pub fn main() -> Result<(), Error> {
     INSTRUCTIONS:
 
     PAUSE - Activate/Deactivate Free Camera
+    END - Deactivate UI
     DEL - Deattach Mouse
 
     UP, DOWN, LEFT, RIGHT - Move in the direction you're pointing
@@ -159,11 +145,15 @@ pub fn main() -> Result<(), Error> {
     let pause_value = yakuza.inject_shellcode(pause_value_ep, 7,
         get_pause_value as usize as *const u8);
 
-    // UI entry point
-    let get_ui_ep: usize = 0x1B714A2;
-    let get_ui_add = yakuza.inject_shellcode(get_ui_ep, 7,
-        get_ui_flag as usize as *const u8);
+    // Hide UI stuff
+    let hide_ui_f: Vec<u8> = vec![0x41, 0x0F, 0x29, 0x9E, 0x70, 0x01, 0x00, 0x00];
+    let hide_ui_rep: Vec<u8> = vec![0x45, 0x0F, 0x29, 0x8E, 0x70, 0x01, 0x00, 0x00];
+    let hide_ui_offset: usize = 0x8B2E8C;
 
+    // flashy health bar
+    let flashy_bar_f: Vec<u8> = vec![0xC6, 0x04, 0x0B, 0x01];
+    let flashy_bar_rep: Vec<u8> = vec![0xC6, 0x04, 0x0B, 0x00];
+    let flashy_bar_offset: usize = 0x1B71453;
 
     let mut active = false;
     let mut capture_mouse = false;
@@ -197,7 +187,6 @@ pub fn main() -> Result<(), Error> {
         let speed_y = ((mouse_pos.y - latest_y) as f32)/duration/10./(40.-fov*10.);
 
         let c_v_a = yakuza.read_value::<usize>(pause_value+0x200);
-        let ui_v_a = yakuza.read_value::<usize>(get_ui_add+0x200);
 
         // focus position
         let mut f_cam_x = yakuza.read_value::<f32>(p_shellcode + 0x200);
@@ -291,28 +280,26 @@ pub fn main() -> Result<(), Error> {
                     yakuza.write_nops(set_cursor_call_offset,
                         set_cursor_call.len());
 
+                    yakuza.write_aob(hide_ui_offset, &hide_ui_rep);
+
+                    yakuza.write_aob(flashy_bar_offset, &flashy_bar_rep);
+
                     // pause stuff
                     yakuza.write_aob(pause_cinematic_offset, &pause_cinematic_rep);
-
-                    if ui_v_a != 0x0 {
-                        yakuza.write_value::<u8>(ui_v_a, 0x01);
-                    }
-
                 } else {
                     yakuza.write_aob(focal_length_o, &focal_length_f);
 
                     yakuza.write_aob(set_cursor_call_offset,
                         &set_cursor_call);
 
+                    yakuza.write_aob(hide_ui_offset, &hide_ui_f);
+
+                    yakuza.write_aob(flashy_bar_offset, &flashy_bar_f);
+
                     // unpause stuff
                     yakuza.write_aob(pause_cinematic_offset, &pause_cinematic_f);
-
-                    if ui_v_a != 0x0 {
-                        yakuza.write_value::<u8>(ui_v_a, 0x02);
-                    }
                 }
 
-                thread::sleep(Duration::from_millis(180));
                 trigger_pause(&yakuza, c_v_a);
                 thread::sleep(Duration::from_millis(500));
             }
