@@ -58,6 +58,21 @@ unsafe fn get_pause_value() {
     ": : : : "volatile", "intel");
 }
 
+#[naked]
+unsafe fn get_ui_flag() {
+    llvm_asm!("
+    push rcx
+    lea rcx,[rax+0xC8]
+    mov [rip+0x200-0xF],rcx //0xF is the RIP relative progress until this instruction
+    pop rcx
+
+    // original code
+    cmp dword ptr [rax + 0xC8],0x02
+    ret
+    nop;nop;nop;nop;
+    ": : : : "volatile", "intel");
+}
+
 fn trigger_pause(process: &Process, addr: usize) {
     if addr == 0x0 { return; }
     process.write_value::<u8>(addr, 0x1);
@@ -139,10 +154,15 @@ pub fn main() -> Result<(), Error> {
     let p_shellcode = yakuza.inject_shellcode(entry_point, 9,
         shellcode as usize as *const u8);
 
-    // entry point
+    // Pause world entry point
     let pause_value_ep: usize = 0xDF5E1B;
     let pause_value = yakuza.inject_shellcode(pause_value_ep, 7,
         get_pause_value as usize as *const u8);
+
+    // UI entry point
+    let get_ui_ep: usize = 0x1B714A2;
+    let get_ui_add = yakuza.inject_shellcode(get_ui_ep, 7,
+        get_ui_flag as usize as *const u8);
 
 
     let mut active = false;
@@ -177,6 +197,7 @@ pub fn main() -> Result<(), Error> {
         let speed_y = ((mouse_pos.y - latest_y) as f32)/duration/10./(40.-fov*10.);
 
         let c_v_a = yakuza.read_value::<usize>(pause_value+0x200);
+        let ui_v_a = yakuza.read_value::<usize>(get_ui_add+0x200);
 
         // focus position
         let mut f_cam_x = yakuza.read_value::<f32>(p_shellcode + 0x200);
@@ -270,11 +291,19 @@ pub fn main() -> Result<(), Error> {
                     yakuza.write_nops(set_cursor_call_offset,
                         set_cursor_call.len());
 
+                    if ui_v_a != 0x0 {
+                        yakuza.write_value::<u8>(ui_v_a, 0x01);
+                    }
+
                 } else {
                     yakuza.write_aob(focal_length_o, &focal_length_f);
 
                     yakuza.write_aob(set_cursor_call_offset,
                         &set_cursor_call);
+
+                    if ui_v_a != 0x0 {
+                        yakuza.write_value::<u8>(ui_v_a, 0x02);
+                    }
                 }
                 thread::sleep(Duration::from_millis(500));
             }
