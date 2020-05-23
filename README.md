@@ -5,6 +5,8 @@
 
 This is a revamped and rewritten camera tool for the Yakuza 0, Kiwami and Kiwami 2. It works in Cutscenes and freeroam.
 
+# This only works with the Steam version
+
 ## Features
 Yakuza 0 & Kiwami:
 - You can release the camera in almost every place
