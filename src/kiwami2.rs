@@ -109,14 +109,14 @@ pub fn main() -> Result<(), Error> {
     INSTRUCTIONS:
 
     PAUSE - Activate/Deactivate Free Camera
-    END - Pause/Unpause World
     DEL - Deattach Mouse
 
     UP, DOWN, LEFT, RIGHT - Move in the direction you're pointing
     PG UP, PG DOWN - Increase/Decrease speed multiplier
     F1, F2 - Increase/Decrease FOV respectively
 
-    WARNING: Pause function is still experimental
+    WARNING: Don't forget to deactivate the freecam before skipping a cutscene
+    (it may cause a game freeze)
 
     WARNING: Once you deattach the camera (PAUSE), your mouse will be set in a fixed
     position, so in order to attach/deattach the mouse to the camera, you can
@@ -291,6 +291,9 @@ pub fn main() -> Result<(), Error> {
                     yakuza.write_nops(set_cursor_call_offset,
                         set_cursor_call.len());
 
+                    // pause stuff
+                    yakuza.write_aob(pause_cinematic_offset, &pause_cinematic_rep);
+
                     if ui_v_a != 0x0 {
                         yakuza.write_value::<u8>(ui_v_a, 0x01);
                     }
@@ -301,10 +304,16 @@ pub fn main() -> Result<(), Error> {
                     yakuza.write_aob(set_cursor_call_offset,
                         &set_cursor_call);
 
+                    // unpause stuff
+                    yakuza.write_aob(pause_cinematic_offset, &pause_cinematic_f);
+
                     if ui_v_a != 0x0 {
                         yakuza.write_value::<u8>(ui_v_a, 0x02);
                     }
                 }
+
+                thread::sleep(Duration::from_millis(180));
+                trigger_pause(&yakuza, c_v_a);
                 thread::sleep(Duration::from_millis(500));
             }
 
@@ -330,18 +339,6 @@ pub fn main() -> Result<(), Error> {
                     println!("Cannot be decreased, {:.2}", speed_scale);
                 }
                 thread::sleep(Duration::from_millis(100));
-            }
-
-            if (GetAsyncKeyState(winuser::VK_END) as u32 & 0x8000) != 0 {
-                trigger_pause(&yakuza, c_v_a);
-                pause_world = !pause_world;
-                println!("status of pausing: {}", pause_world);
-                if pause_world {
-                    yakuza.write_aob(pause_cinematic_offset, &pause_cinematic_rep);
-                } else {
-                    yakuza.write_aob(pause_cinematic_offset, &pause_cinematic_f);
-                }
-                thread::sleep(Duration::from_millis(500));
             }
         }
     }
