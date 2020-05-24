@@ -6,6 +6,7 @@ use std::io::{Error, ErrorKind};
 use std::thread;
 use std::time::{Duration, Instant};
 use std::f32;
+use crate::common;
 
 const INITIAL_POS: i32 = 500;
 
