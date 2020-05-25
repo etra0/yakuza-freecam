@@ -85,6 +85,7 @@ pub fn main() -> Result<(), Error> {
     DEL - Deattach Mouse
 
     UP, DOWN, LEFT, RIGHT - Move in the direction you're pointing
+    CTRL, SPACE - Move UP or DOWN
     PG UP, PG DOWN - Increase/Decrease speed multiplier
     F1, F2 - Increase/Decrease FOV respectively
 
@@ -181,7 +182,7 @@ pub fn main() -> Result<(), Error> {
 
         let c_v_a = yakuza.read_value::<usize>(pause_value+0x200);
 
-        if active {
+        if active && capture_mouse {
             cam.update_position(&yakuza, speed_x, speed_y);
         }
 
