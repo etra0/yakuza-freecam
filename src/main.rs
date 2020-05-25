@@ -10,6 +10,8 @@ mod kiwami;
 #[cfg(all(not(feature = "kiwami2"), not(feature = "kiwami")))]
 mod zero;
 
+mod common;
+
 fn main() {
     #[cfg(feature = "kiwami2")]
     let result = kiwami2::main();
