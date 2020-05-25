@@ -154,9 +154,8 @@ impl Camera {
         process.write_value::<f32>(self.data_base_addr + 0x260, self.fov);
 
         // TODO: Generalizar esto
-        process.write_value::<f32>(self.data_base_addr + 0x240, 0.);
-        process.write_value::<f32>(self.data_base_addr + 0x244, 1.);
-        process.write_value::<f32>(self.data_base_addr + 0x248, 0.);
+        process.write_value::<[f32; 3]>(self.data_base_addr+0x240,
+            [0., 1., 0.]);
     }
 
     pub fn deattach(&self, process: &Process) {

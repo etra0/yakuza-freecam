@@ -63,6 +63,27 @@ unsafe fn get_pause_value() {
     ": : : : "volatile", "intel");
 }
 
+unsafe fn get_controller_input() {
+    llvm_asm!("
+    push rax
+    mov rax,[rsp+0x10]
+    mov [rip+0x200-0xD],rax
+    pop rax
+
+    // original code
+    test eax,eax
+    mov rax,[rsp+0x108+0x8] // adjusted stack offset
+    ret
+    nop;nop;nop;nop
+    ": : : : "volatile", "intel");
+}
+
+fn detect_activation_by_controller(value: u64) -> bool {
+    println!("{:x}", value);
+    let result = value & 0x11;
+    return result != 0;
+}
+
 fn trigger_pause(process: &Process, addr: usize) {
     if addr == 0x0 { return; }
     process.write_value::<u8>(addr, 0x1);
@@ -112,6 +133,10 @@ pub fn main() -> Result<(), Error> {
 
     let p_shellcode = yakuza.inject_shellcode(entry_point, 9,
         shellcode as usize as *const u8);
+
+    let p_controller = yakuza.inject_shellcode(0x1B98487, 8,
+        get_controller_input as usize as *const u8);
+
 
     let mut cam = Camera::new(p_shellcode);
 
@@ -181,6 +206,11 @@ pub fn main() -> Result<(), Error> {
         let speed_y = ((mouse_pos.y - latest_y) as f32)/duration/100.;
 
         let c_v_a = yakuza.read_value::<usize>(pause_value+0x200);
+        let controller_structure_p: usize = yakuza.read_value(p_controller+0x200);
+        let controller_state = match controller_structure_p {
+            0 => 0,
+            v => yakuza.read_value::<u64>(controller_structure_p)
+        };
 
         if active && capture_mouse {
             cam.update_position(&yakuza, speed_x, speed_y);
@@ -192,7 +222,8 @@ pub fn main() -> Result<(), Error> {
         // to scroll infinitely
         restart_mouse = !restart_mouse;
         unsafe {
-            if (GetAsyncKeyState(winuser::VK_PAUSE) as u32 & 0x8000) != 0 {
+            if detect_activation_by_controller(controller_state) || 
+                ((GetAsyncKeyState(winuser::VK_PAUSE) as u32 & 0x8000) != 0) {
                 active = !active;
                 capture_mouse = active;
 
