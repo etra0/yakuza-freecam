@@ -79,9 +79,8 @@ unsafe fn get_controller_input() {
 }
 
 fn detect_activation_by_controller(value: u64) -> bool {
-    println!("{:x}", value);
     let result = value & 0x11;
-    return result != 0;
+    return result == 0x11;
 }
 
 fn trigger_pause(process: &Process, addr: usize) {
@@ -101,14 +100,14 @@ pub fn main() -> Result<(), Error> {
     println!("
     INSTRUCTIONS:
 
-    PAUSE - Activate/Deactivate Free Camera
-    END - Deactivate UI
+    PAUSE/L2 + X - Activate/Deactivate Free Camera
     DEL - Deattach Mouse
 
-    UP, DOWN, LEFT, RIGHT - Move in the direction you're pointing
+    UP, DOWN, LEFT, RIGHT/Left Stick - Move in the direction you're pointing
+    Mouse/Right Stick - Point
     CTRL, SPACE - Move UP or DOWN
     PG UP, PG DOWN - Increase/Decrease speed multiplier
-    F1, F2 - Increase/Decrease FOV respectively
+    F1, F2/L2, R2 - Increase/Decrease FOV respectively
 
     WARNING: Don't forget to deactivate the freecam before skipping a cutscene
     (it may cause a game freeze)
@@ -138,7 +137,7 @@ pub fn main() -> Result<(), Error> {
         get_controller_input as usize as *const u8);
 
 
-    let mut cam = Camera::new(p_shellcode);
+    let mut cam = Camera::new(&yakuza, p_shellcode);
 
     // function that changes the focal length of the cinematics, when
     // active, nop this
@@ -202,8 +201,8 @@ pub fn main() -> Result<(), Error> {
         unsafe { GetCursorPos(&mut mouse_pos) };
         let duration = start.elapsed().as_millis() as f32;
 
-        let speed_x = ((mouse_pos.x - latest_x) as f32)/duration/100.;
-        let speed_y = ((mouse_pos.y - latest_y) as f32)/duration/100.;
+        let speed_x = ((mouse_pos.x - latest_x) as f32)/duration;
+        let speed_y = ((mouse_pos.y - latest_y) as f32)/duration;
 
         let c_v_a = yakuza.read_value::<usize>(pause_value+0x200);
         let controller_structure_p: usize = yakuza.read_value(p_controller+0x200);
@@ -213,7 +212,16 @@ pub fn main() -> Result<(), Error> {
         };
 
         if active && capture_mouse {
-            cam.update_position(&yakuza, speed_x, speed_y);
+            let [pos_x, pos_y, pitch, yaw] = yakuza.read_value::<[f32; 4]>(controller_structure_p+0x10);
+            cam.update_position(0., 0., speed_x, speed_y);
+            cam.update_position(-pos_x, -pos_y, pitch, yaw);
+
+            let detect_fov = controller_state & 0x30;
+            if (detect_fov == 0x20) {
+                cam.update_fov(0.01);
+            } else if (detect_fov == 0x10) {
+                cam.update_fov(-0.01);
+            }
         }
 
         latest_x = mouse_pos.x;
@@ -231,9 +239,9 @@ pub fn main() -> Result<(), Error> {
                 println!("status of camera: {}", c_status);
 
                 if active {
-                    cam.deattach(&yakuza);
+                    cam.deattach();
                 } else {
-                    cam.attach(&yakuza);
+                    cam.attach();
                 }
 
                 trigger_pause(&yakuza, c_v_a);

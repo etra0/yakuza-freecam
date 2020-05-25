@@ -57,6 +57,18 @@ not_zero:
     ": : : : "volatile", "intel");
 }
 
+unsafe fn get_controller_input() {
+    llvm_asm!("
+    mov [rip+0x200-0x7],rbx
+
+    // original code
+    mov r14,r9
+    mov rsi,r8
+    ret
+    nop;nop;nop;nop
+    ": : : : "volatile", "intel");
+}
+
 pub fn main() -> Result<(), Error> {
     let mut mouse_pos: POINT = POINT::default();
 
@@ -67,14 +79,16 @@ pub fn main() -> Result<(), Error> {
     println!("
     INSTRUCTIONS:
 
-    PAUSE - Activate/Deactivate Free Camera
-    END - Pause the cinematic
+    PAUSE/L2 + X - Activate/Deactivate Free Camera
+    END/L2 + Square - Pause the cinematic
     DEL - Deattach Mouse
 
-    UP, DOWN, LEFT, RIGHT - Move in the direction you're pointing
+    W, A, S, D/Left Stick - Move the camera
+    Mouse/Right Stick - Point the camera
+
     CTRL, SPACE - Move UP or DOWN
     PG UP, PG DOWN - Increase/Decrease speed multiplier
-    F1, F2 - Increase/Decrease FOV respectively
+    F1, F2/L2, R2 - Increase/Decrease FOV respectively
 
     WARNING: Once you deattach the camera (PAUSE), your mouse will be set in a fixed
     position, so in order to attach/deattach the mouse to the camera, you can
@@ -100,7 +114,10 @@ pub fn main() -> Result<(), Error> {
     let p_shellcode = yakuza.inject_shellcode(entry_point, entry_point_size,
         shellcode as usize as *const u8);
 
-    let mut cam = Camera::new(p_shellcode);
+    let p_controller = yakuza.inject_shellcode(0x18C00B, 6,
+        get_controller_input as usize as *const u8);
+
+    let mut cam = Camera::new(&yakuza, p_shellcode);
 
     // function that changes the focal length of the cinematics, when
     // active, nop this
@@ -141,9 +158,24 @@ pub fn main() -> Result<(), Error> {
         let speed_x = ((mouse_pos.x - latest_x) as f32)/duration/100.;
         let speed_y = ((mouse_pos.y - latest_y) as f32)/duration/100.;
 
+        let controller_structure_p: usize = yakuza.read_value(p_controller+0x200);
+        let controller_state = match controller_structure_p {
+            0 => 0,
+            v => yakuza.read_value::<u64>(controller_structure_p)
+        };
 
         if capture_mouse {
-            cam.update_position(&yakuza, speed_x, speed_y);
+            let [pos_x, pos_y, pitch, yaw] = yakuza.read_value::<[f32; 4]>(controller_structure_p+0x10);
+
+            cam.update_position(0., 0., speed_x, speed_y);
+            cam.update_position(-pos_x, -pos_y, pitch, yaw);
+
+            let detect_fov = controller_state & 0x30;
+            if (detect_fov == 0x20) {
+                cam.update_fov(0.01);
+            } else if (detect_fov == 0x10) {
+                cam.update_fov(-0.01);
+            }
         }
 
         latest_x = mouse_pos.x;
@@ -152,16 +184,17 @@ pub fn main() -> Result<(), Error> {
         // to scroll infinitely
         restart_mouse = !restart_mouse;
         unsafe {
-            if (GetAsyncKeyState(winuser::VK_PAUSE) as u32 & 0x8000) != 0 {
+            if (controller_state & 0x11 == 0x11) ||
+                (GetAsyncKeyState(winuser::VK_PAUSE) as u32 & 0x8000) != 0 {
                 active = !active;
                 capture_mouse = active;
 
                 let c_status = if active { "Deattached" } else { "Attached" };
                 println!("status of camera: {}", c_status);
                 if active {
-                    cam.deattach(&yakuza);
+                    cam.deattach();
                 } else {
-                    cam.attach(&yakuza);
+                    cam.attach();
                 }
                 thread::sleep(Duration::from_millis(500));
             }
@@ -173,7 +206,8 @@ pub fn main() -> Result<(), Error> {
                 thread::sleep(Duration::from_millis(500));
             }
 
-            if (GetAsyncKeyState(winuser::VK_END) as u32 & 0x8000) != 0 {
+            if (controller_state & 0x14 == 0x14) || 
+                (GetAsyncKeyState(winuser::VK_END) as u32 & 0x8000) != 0 {
                 pause_world = !pause_world;
                 println!("status of pausing: {}", pause_world);
                 if pause_world {
