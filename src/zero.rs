@@ -161,17 +161,20 @@ pub fn main() -> Result<(), Error> {
         };
 
         if capture_mouse {
-            let [pos_x, pos_y, pitch, yaw] = yakuza.read_value::<[f32; 4]>(controller_structure_p+0x10);
-
-            let detect_fov = controller_state & 0x30;
-            if (detect_fov == 0x20) {
-                cam.update_fov(0.01);
-            } else if (detect_fov == 0x10) {
-                cam.update_fov(-0.01);
-            }
-
             cam.update_position(0., 0., speed_x, speed_y);
-            cam.update_position(-pos_x, -pos_y, pitch, yaw);
+
+            if controller_structure_p != 0 {
+                let [pos_x, pos_y, pitch, yaw] = yakuza.read_value::<[f32; 4]>(controller_structure_p+0x10);
+
+                let detect_fov = controller_state & 0x30;
+                if (detect_fov == 0x20) {
+                    cam.update_fov(0.01);
+                } else if (detect_fov == 0x10) {
+                    cam.update_fov(-0.01);
+                }
+
+                cam.update_position(-pos_x, -pos_y, pitch, yaw);
+            }
         }
 
         latest_x = mouse_pos.x;
