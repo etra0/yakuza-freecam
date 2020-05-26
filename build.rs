@@ -4,14 +4,17 @@ fn main() {
     if cfg!(target_os = "windows") {
         let mut res = winres::WindowsResource::new();
 
-        #[cfg(feature = "kiwami2")]
-        res.set_icon("assets\\kiwami2.ico");
+        #[cfg(all(not(feature = "kiwami2"), not(feature = "kiwami")))]
+        let name = "yakuza0";
 
         #[cfg(feature = "kiwami")]
-        res.set_icon("assets\\kiwami.ico");
+        let name = "kiwami";
 
-        #[cfg(all(not(feature = "kiwami2"), not(feature = "kiwami")))]
-        res.set_icon("assets\\yakuza0.ico");
+        #[cfg(feature = "kiwami2")]
+        let name = "kiwami2";
+
+        res.set_icon(&format!("assets\\{}.ico", name).to_string());
+        res.set("OriginalFilename", &format!("{}-freecam", name).to_string());
 
         res.compile().unwrap();
     }

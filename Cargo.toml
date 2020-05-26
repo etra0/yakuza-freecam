@@ -15,3 +15,17 @@ winapi = { version = "0.3.8", features = ["winuser", "impl-default"] }
 
 [build-dependencies]
 winres = "0.1"
+
+[[bin]]
+name = "yakuza0-freecam"
+path = "src/main.rs"
+
+[[bin]]
+name = "kiwami-freecam"
+path = "src/main.rs"
+required-features = ["kiwami"]
+
+[[bin]]
+name = "kiwami2-freecam"
+path = "src/main.rs"
+required-features = ["kiwami2"]
