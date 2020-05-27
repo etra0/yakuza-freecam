@@ -2,7 +2,7 @@ use memory_rs::process::process_wrapper::Process;
 use winapi::um::winuser;
 use winapi::um::winuser::{GetCursorPos, SetCursorPos, GetAsyncKeyState};
 use winapi::shared::windef::{POINT};
-use std::io::{Error, ErrorKind};
+use std::io::Error;
 use std::thread;
 use std::time::{Duration, Instant};
 use std::f32;
@@ -10,54 +10,12 @@ use crate::common::{Camera, Injection};
 
 const INITIAL_POS: i32 = 500;
 
-#[naked]
-unsafe fn shellcode() {
-    llvm_asm!("
-    push r11
-    lea r11,[rip+0x200-0x9];
-    pushf
-    push rax
-    mov eax, [r11-0x10]
-    test eax, eax
-    pop rax
-    je not_zero
-    movaps xmm4,[r11+0x40]
-    movaps xmm5,[r11]
-    movaps xmm6,[r11+0x20] // 0x220
-    push rbx
-    mov rbx,[r11+0x60]
-    mov [rax+0xAC],rbx
-    pop rbx
+extern {
+    static get_camera_data: u8;
+    static get_camera_data_end: u8;
 
-not_zero:
-    movaps [r11],xmm5
-    movaps [r11+0x20],xmm6
-    movaps [r11+0x40],xmm4 // camera rotation
-    
-    // load fov
-    push rbx
-    mov rbx,[rax+0xAC]
-    mov [r11+0x60],rbx
-    pop rbx
-
-    popf
-    pop r11
-    movaps [rsp+0x48],xmm4 // adjusted offset of stack pointer + 8
-    ret
-    nop;nop;nop;nop;
-    ": : : : "volatile", "intel");
-}
-
-unsafe fn get_controller_input() {
-    llvm_asm!("
-    mov [rip+0x200-0x7],rbx
-
-    // original code
-    mov rbp,r9
-    mov rsi,r8
-    ret
-    nop;nop;nop;nop
-    ": : : : "volatile", "intel");
+    static get_controller_input: u8;
+    static get_controller_input_end: u8;
 }
 
 fn detect_activation_by_controller(value: u64, activation: u64) -> bool {
@@ -107,11 +65,12 @@ pub fn main() -> Result<(), Error> {
     println!("Game hooked");
 
     let entry_point: usize = 0x18FD38;
-    let p_shellcode = yakuza.inject_shellcode(entry_point, 5,
-        shellcode as usize as *const u8);
+    let p_shellcode = unsafe { yakuza.inject_shellcode(entry_point, 5,
+        &get_camera_data as *const u8, &get_camera_data_end as *const u8) };
 
-    let p_controller = yakuza.inject_shellcode(0xEC1F, 6,
-        get_controller_input as usize as *const u8);
+    let p_controller = unsafe { yakuza.inject_shellcode(0xEC1F, 6,
+        &get_controller_input as *const u8,
+        &get_controller_input_end as *const u8) };
 
     let mut cam = Camera::new(&yakuza, p_shellcode);
 
@@ -157,7 +116,7 @@ pub fn main() -> Result<(), Error> {
         let controller_structure_p: usize = yakuza.read_value(p_controller+0x200);
         let controller_state = match controller_structure_p {
             0 => 0,
-            v => yakuza.read_value::<u64>(controller_structure_p)
+            _ => yakuza.read_value::<u64>(controller_structure_p)
         };
 
         if capture_mouse {
@@ -167,9 +126,9 @@ pub fn main() -> Result<(), Error> {
                 let [pos_x, pos_y, pitch, yaw] = yakuza.read_value::<[f32; 4]>(controller_structure_p+0x10);
 
                 let detect_fov = controller_state & 0x30;
-                if (detect_fov == 0x20) {
+                if detect_fov == 0x20 {
                     cam.update_fov(0.01);
-                } else if (detect_fov == 0x10) {
+                } else if detect_fov == 0x10 {
                     cam.update_fov(-0.01);
                 }
 

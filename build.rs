@@ -13,6 +13,11 @@ fn main() {
         #[cfg(feature = "kiwami2")]
         let name = "kiwami2";
 
+        cc::Build::new()
+            .file(&format!("src\\asm\\{}.asm", name).to_string())
+            .compile(&format!("{}-asm", name).to_string());
+        println!("cargo:rerun-if-changed=src\\asm\\{}.asm", name);
+
         res.set_icon(&format!("assets\\{}.ico", name).to_string());
         res.set("OriginalFilename", &format!("{}-freecam", name).to_string());
 

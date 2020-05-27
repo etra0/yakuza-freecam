@@ -2,7 +2,7 @@ use memory_rs::process::process_wrapper::Process;
 use winapi::um::winuser;
 use winapi::um::winuser::{GetCursorPos, SetCursorPos, GetAsyncKeyState};
 use winapi::shared::windef::{POINT};
-use std::io::{Error, ErrorKind};
+use std::io::Error;
 use std::thread;
 use std::time::{Duration, Instant};
 use std::f32;
@@ -10,72 +10,15 @@ use crate::common::{Camera, Injection};
 
 const INITIAL_POS: i32 = 500;
 
-#[naked]
-unsafe fn shellcode() {
-    llvm_asm!("
-    push r11
-    lea r11,[rip+0x200-0x9];
-    pushf
-    push rax
-    mov eax, [r11-0x10]
-    test eax, eax
-    pop rax
-    je not_zero
-    movaps xmm4,[r11+0x40] // rotation
-    movaps xmm10,[r11] // focus
-    movaps xmm12,[r11+0x20] // position
-    // FOV 
-    push rax
-    mov rax,[r11+0x60]
-    mov [rdx+0x58],rax
-    pop rax
+extern {
+    static get_camera_data: u8;
+    static get_camera_data_end: u8;
 
-not_zero:
-    movaps [r11],xmm10
-    movaps [r11+0x20],xmm12
-    movaps [r11+0x40],xmm4 // camera rotation
-    push rax
-    mov rax,[rdx+0x58]
-    mov [r11+0x60],rax
-    pop rax
+    static get_pause_value: u8;
+    static get_pause_value_end: u8;
 
-    popf
-    pop r11
-    subps xmm10,xmm12
-    movq xmm0,rax
-    ret
-    nop;nop;nop;nop;
-    ": : : : "volatile", "intel");
-}
-
-#[naked]
-unsafe fn get_pause_value() {
-    llvm_asm!("
-    push rax
-    lea rax,[rdi+0x188]
-    mov [rip+0x200-0xF],rax
-    pop rax
-
-    // original code
-    movzx eax,byte ptr [rdi+0x188]
-    ret
-    nop;nop;nop;nop;
-    ": : : : "volatile", "intel");
-}
-
-unsafe fn get_controller_input() {
-    llvm_asm!("
-    push rax
-    mov rax,[rsp+0x10]
-    mov [rip+0x200-0xD],rax
-    pop rax
-
-    // original code
-    test eax,eax
-    mov rax,[rsp+0x108+0x8] // adjusted stack offset
-    ret
-    nop;nop;nop;nop
-    ": : : : "volatile", "intel");
+    static get_controller_input: u8;
+    static get_controller_input_end: u8;
 }
 
 fn detect_activation_by_controller(value: u64) -> bool {
@@ -91,6 +34,7 @@ fn trigger_pause(process: &Process, addr: usize) {
 }
 
 pub fn main() -> Result<(), Error> {
+
     let mut mouse_pos: POINT = POINT::default();
 
     // latest mouse positions
@@ -130,11 +74,15 @@ pub fn main() -> Result<(), Error> {
 
     let entry_point: usize = 0x1F0222B;
 
-    let p_shellcode = yakuza.inject_shellcode(entry_point, 9,
-        shellcode as usize as *const u8);
+    let p_shellcode = unsafe { yakuza.inject_shellcode(entry_point, 9,
+        &get_camera_data as *const u8, &get_camera_data_end as *const u8) };
 
-    let p_controller = yakuza.inject_shellcode(0x1B98487, 8,
-        get_controller_input as usize as *const u8);
+    let p_controller = unsafe { yakuza.inject_shellcode(0x1B98487, 8,
+        &get_controller_input as *const u8, &get_controller_input_end as *const u8) };
+
+    let pause_value_ep: usize = 0xDF5E1B;
+    let pause_value = unsafe { yakuza.inject_shellcode(pause_value_ep, 7,
+        &get_pause_value as *const u8, &get_pause_value_end as *const u8) };
 
 
     let mut cam = Camera::new(&yakuza, p_shellcode);
@@ -161,10 +109,6 @@ pub fn main() -> Result<(), Error> {
         f_rep: vec![0xE9, 0x5F, 0x02, 0x00, 0x00, 0x90]
     });
 
-    // Pause world entry point
-    let pause_value_ep: usize = 0xDF5E1B;
-    let pause_value = yakuza.inject_shellcode(pause_value_ep, 7,
-        get_pause_value as usize as *const u8);
 
     // Hide UI stuff
     cam.injections.push(Injection {
@@ -208,7 +152,7 @@ pub fn main() -> Result<(), Error> {
         let controller_structure_p: usize = yakuza.read_value(p_controller+0x200);
         let controller_state = match controller_structure_p {
             0 => 0,
-            v => yakuza.read_value::<u64>(controller_structure_p)
+            _ => yakuza.read_value::<u64>(controller_structure_p)
         };
 
         if active && capture_mouse {
@@ -218,9 +162,9 @@ pub fn main() -> Result<(), Error> {
                 cam.update_position(-pos_x, -pos_y, pitch, yaw);
 
                 let detect_fov = controller_state & 0x30;
-                if (detect_fov == 0x20) {
+                if detect_fov == 0x20 {
                     cam.update_fov(0.01);
-                } else if (detect_fov == 0x10) {
+                } else if detect_fov == 0x10 {
                     cam.update_fov(-0.01);
                 }
             }

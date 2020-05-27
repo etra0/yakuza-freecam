@@ -15,6 +15,7 @@ winapi = { version = "0.3.8", features = ["winuser", "impl-default"] }
 
 [build-dependencies]
 winres = "0.1"
+cc = "1.0"
 
 [[bin]]
 name = "yakuza0-freecam"

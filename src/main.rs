@@ -1,6 +1,3 @@
-#![feature(naked_functions)]
-#![feature(llvm_asm)]
-
 #[cfg(feature = "kiwami2")]
 mod kiwami2;
 
