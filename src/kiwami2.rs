@@ -2,7 +2,7 @@ use memory_rs::process::process_wrapper::Process;
 use winapi::um::winuser;
 use winapi::um::winuser::{GetCursorPos, SetCursorPos, GetAsyncKeyState};
 use winapi::shared::windef::{POINT};
-use std::io::{Error, ErrorKind};
+use std::io::Error;
 use std::thread;
 use std::time::{Duration, Instant};
 use std::f32;
@@ -152,7 +152,7 @@ pub fn main() -> Result<(), Error> {
         let controller_structure_p: usize = yakuza.read_value(p_controller+0x200);
         let controller_state = match controller_structure_p {
             0 => 0,
-            v => yakuza.read_value::<u64>(controller_structure_p)
+            _ => yakuza.read_value::<u64>(controller_structure_p)
         };
 
         if active && capture_mouse {
@@ -162,9 +162,9 @@ pub fn main() -> Result<(), Error> {
                 cam.update_position(-pos_x, -pos_y, pitch, yaw);
 
                 let detect_fov = controller_state & 0x30;
-                if (detect_fov == 0x20) {
+                if detect_fov == 0x20 {
                     cam.update_fov(0.01);
-                } else if (detect_fov == 0x10) {
+                } else if detect_fov == 0x10 {
                     cam.update_fov(-0.01);
                 }
             }

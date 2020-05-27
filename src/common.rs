@@ -1,7 +1,7 @@
 use memory_rs::process::process_wrapper::Process;
 use winapi::um::winuser;
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 // TODO: Fix this pub stuff
 pub struct Injection {

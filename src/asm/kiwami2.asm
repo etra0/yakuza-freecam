@@ -66,8 +66,8 @@ get_pause_value ENDP
 ;; Intercept the controller input when controller is detected
 get_controller_input PROC
   push rax
-  push rbx
   mov rax,[rsp+10h]
+  push rbx
   lea rbx,[relpos+200h-11h]
   mov [rbx],rax
 relpos:
