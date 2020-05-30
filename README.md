@@ -18,27 +18,25 @@ Yakuza Kiwami 2:
 
 ## Usage
 
-**The relevant game must be running before you run the free camera tool.**
-
 You should see a Command Prompt window with instructions. If one briefly flashes on the screen, or doesn't appear at all, you may need to open Command Prompt yourself and run it to see what went wrong.
 
 ## Compilation
 Yakuza Zero:
 
 ```
-cargo +nightly build --release
+cargo build --bin yakuza-freecam --release
 ```
 
 Yakuza Kiwami:
 
 ```
-cargo +nightly build --features kiwami --release
+cargo build --bin kiwami-freecam --features kiwami --release
 ```
 
 Yakuza Kiwami 2:
 
 ```
-cargo +nightly build --features kiwami2 --release
+cargo build --bin kiwami2-freecam --features kiwami2 --release
 ```
 
 
