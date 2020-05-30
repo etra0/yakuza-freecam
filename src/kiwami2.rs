@@ -29,7 +29,7 @@ fn detect_activation_by_controller(value: u64) -> bool {
 fn trigger_pause(process: &Process, addr: usize) {
     if addr == 0x0 { return; }
     process.write_value::<u8>(addr, 0x1);
-    thread::sleep(Duration::from_millis(20));
+    thread::sleep(Duration::from_millis(100));
     process.write_value::<u8>(addr, 0x0);
 }
 

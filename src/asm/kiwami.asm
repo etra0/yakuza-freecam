@@ -8,8 +8,7 @@ PUBLIC get_controller_input_end
 
 get_camera_data PROC
   push r11
-  lea r11,[relpos+0200h-09h];
-  relpos:
+  lea r11,[get_camera_data + 200h];
   pushf
   push rax
   mov eax, [r11-010h]
@@ -52,8 +51,7 @@ get_camera_data ENDP
 
 get_controller_input PROC
   push rax
-  lea rax,[relpos+200h-8h]
-  relpos:
+  lea rax,[get_controller_input + 200h]
   mov [rax],rbx
   pop rax
 
