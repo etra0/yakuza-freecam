@@ -11,8 +11,7 @@ PUBLIC get_controller_input_end
 ;; Function that intercepts the values written into the camera
 get_camera_data PROC
     push r11
-    lea r11,[relpos+200h-9h];
-relpos:
+    lea r11,[get_camera_data+200h];
     pushf
     push rax
     mov eax, [r11-10h]
@@ -51,9 +50,8 @@ get_pause_value PROC
     push rax
     push rbx
     lea rax,[rdi+188h]
-    lea rbx,[relpos+200h-13h]
+    lea rbx,[get_pause_value + 200h]
     mov [rbx],rax
-relpos:
     pop rbx
     pop rax
 
@@ -68,9 +66,8 @@ get_controller_input PROC
   push rax
   mov rax,[rsp+10h]
   push rbx
-  lea rbx,[relpos+200h-11h]
+  lea rbx,[get_controller_input + 200h]
   mov [rbx],rax
-relpos:
   pop rbx
   pop rax
 
