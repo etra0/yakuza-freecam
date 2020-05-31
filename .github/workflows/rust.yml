@@ -15,6 +15,7 @@ jobs:
         uses: "actions/checkout@v1"
         with:
           submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
       # ...
       - name: "Build Yakuza 0"
         run: |
