@@ -36,5 +36,5 @@ jobs:
           prerelease: false
           title: "Latest release"
           files: |
-            **.exe
+            target/release/*.exe
 
