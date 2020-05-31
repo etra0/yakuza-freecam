@@ -30,3 +30,4 @@ required-features = ["kiwami"]
 name = "kiwami2-freecam"
 path = "src/main.rs"
 required-features = ["kiwami2"]
+
