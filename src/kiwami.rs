@@ -134,12 +134,12 @@ pub fn main() -> Result<(), Error> {
                     yakuza.read_value::<[f32; 4]>(controller_structure_p + 0x10, true);
                 cam.update_position(-pos_x, -pos_y, pitch, yaw);
 
-                let detect_fov = controller_state & 0x30;
-                if detect_fov == 0x20 {
-                    cam.update_fov(0.01);
-                } else if detect_fov == 0x10 {
-                    cam.update_fov(-0.01);
-                }
+                // L1 & R1 check
+                match controller_state & 0x30 {
+                    0x20 => cam.update_fov(0.01),
+                    0x10 => cam.update_fov(-0.01),
+                    _ => ()
+                };
             }
         }
 
