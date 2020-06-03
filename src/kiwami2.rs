@@ -28,9 +28,9 @@ fn detect_activation_by_controller(value: u64) -> bool {
 
 fn trigger_pause(process: &Process, addr: usize) {
     if addr == 0x0 { return; }
-    process.write_value::<u8>(addr, 0x1);
+    process.write_value::<u8>(addr, 0x1, true);
     thread::sleep(Duration::from_millis(100));
-    process.write_value::<u8>(addr, 0x0);
+    process.write_value::<u8>(addr, 0x0, true);
 }
 
 pub fn main() -> Result<(), Error> {
@@ -148,17 +148,17 @@ pub fn main() -> Result<(), Error> {
         let speed_x = ((mouse_pos.x - latest_x) as f32)/duration;
         let speed_y = ((mouse_pos.y - latest_y) as f32)/duration;
 
-        let c_v_a = yakuza.read_value::<usize>(pause_value+0x200);
-        let controller_structure_p: usize = yakuza.read_value(p_controller+0x200);
+        let c_v_a = yakuza.read_value::<usize>(pause_value+0x200, true);
+        let controller_structure_p: usize = yakuza.read_value(p_controller+0x200, true);
         let controller_state = match controller_structure_p {
             0 => 0,
-            _ => yakuza.read_value::<u64>(controller_structure_p)
+            _ => yakuza.read_value::<u64>(controller_structure_p, true)
         };
 
         if active && capture_mouse {
             cam.update_position(0., 0., speed_x, speed_y);
             if controller_structure_p != 0x0 {
-                let [pos_x, pos_y, pitch, yaw] = yakuza.read_value::<[f32; 4]>(controller_structure_p+0x10);
+                let [pos_x, pos_y, pitch, yaw] = yakuza.read_value::<[f32; 4]>(controller_structure_p+0x10, true);
                 cam.update_position(-pos_x, -pos_y, pitch, yaw);
 
                 let detect_fov = controller_state & 0x30;
@@ -191,6 +191,21 @@ pub fn main() -> Result<(), Error> {
                 }
 
                 trigger_pause(&yakuza, c_v_a);
+                thread::sleep(Duration::from_millis(500));
+            }
+            if ((GetAsyncKeyState(winuser::VK_HOME) as u32 & 0x8000) != 0) {
+                active = !active;
+                capture_mouse = active;
+
+                let c_status = if active { "Deattached" } else { "Attached" };
+                println!("status of camera: {}", c_status);
+
+                if active {
+                    cam.deattach();
+                } else {
+                    cam.attach();
+                }
+
                 thread::sleep(Duration::from_millis(500));
             }
 

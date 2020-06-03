@@ -109,17 +109,17 @@ pub fn main() -> Result<(), Error> {
         let speed_x = ((mouse_pos.x - latest_x) as f32)/duration/100.;
         let speed_y = ((mouse_pos.y - latest_y) as f32)/duration/100.;
 
-        let controller_structure_p: usize = yakuza.read_value(p_controller+0x200);
+        let controller_structure_p: usize = yakuza.read_value(p_controller+0x200, true);
         let controller_state = match controller_structure_p {
             0 => 0,
-            _ => yakuza.read_value::<u64>(controller_structure_p)
+            _ => yakuza.read_value::<u64>(controller_structure_p, true)
         };
 
         if capture_mouse {
             cam.update_position(0., 0., speed_x, speed_y);
 
             if controller_structure_p != 0x0 {
-                let [pos_x, pos_y, pitch, yaw] = yakuza.read_value::<[f32; 4]>(controller_structure_p+0x10);
+                let [pos_x, pos_y, pitch, yaw] = yakuza.read_value::<[f32; 4]>(controller_structure_p+0x10, true);
                 cam.update_position(-pos_x, -pos_y, pitch, yaw);
 
                 let detect_fov = controller_state & 0x30;
@@ -164,9 +164,9 @@ pub fn main() -> Result<(), Error> {
                 pause_world = !pause_world;
                 println!("status of pausing: {}", pause_world);
                 if pause_world {
-                    yakuza.write_aob(pause_cinematic_offset, &pause_cinematic_rep);
+                    yakuza.write_aob(pause_cinematic_offset, &pause_cinematic_rep, false);
                 } else {
-                    yakuza.write_aob(pause_cinematic_offset, &pause_cinematic_f);
+                    yakuza.write_aob(pause_cinematic_offset, &pause_cinematic_f, false);
                 }
                 thread::sleep(Duration::from_millis(500));
             }

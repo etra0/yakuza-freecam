@@ -73,19 +73,19 @@ impl Camera<'_> {
         if (delta < 0f32) & (self.fov < 0.1) { return; }
         if (delta > 0f32) & (self.fov > 3.13) { return; }
         self.fov += delta;
-        self.process.write_value::<f32>(self.data_base_addr + 0x260, self.fov);
+        self.process.write_value::<f32>(self.data_base_addr + 0x260, self.fov, true);
     }
 
     pub fn update_position(&mut self, pos_x: f32, pos_y: f32, yaw: f32, pitch: f32) {
-        self.f_cam_x = self.process.read_value::<f32>(self.data_base_addr + 0x200);
-        self.f_cam_y = self.process.read_value::<f32>(self.data_base_addr + 0x204);
-        self.f_cam_z = self.process.read_value::<f32>(self.data_base_addr + 0x208);
+        self.f_cam_x = self.process.read_value::<f32>(self.data_base_addr + 0x200, true);
+        self.f_cam_y = self.process.read_value::<f32>(self.data_base_addr + 0x204, true);
+        self.f_cam_z = self.process.read_value::<f32>(self.data_base_addr + 0x208, true);
 
-        self.p_cam_x = self.process.read_value::<f32>(self.data_base_addr + 0x220);
-        self.p_cam_y = self.process.read_value::<f32>(self.data_base_addr + 0x224);
-        self.p_cam_z = self.process.read_value::<f32>(self.data_base_addr + 0x228);
+        self.p_cam_x = self.process.read_value::<f32>(self.data_base_addr + 0x220, true);
+        self.p_cam_y = self.process.read_value::<f32>(self.data_base_addr + 0x224, true);
+        self.p_cam_z = self.process.read_value::<f32>(self.data_base_addr + 0x228, true);
 
-        self.fov = self.process.read_value::<f32>(self.data_base_addr + 0x260);
+        self.fov = self.process.read_value::<f32>(self.data_base_addr + 0x260, true);
 
         let r_cam_x = self.f_cam_x - self.p_cam_x;
         let r_cam_y = self.f_cam_y - self.p_cam_y;
@@ -156,30 +156,30 @@ impl Camera<'_> {
         self.p_cam_z = self.p_cam_z + dp_forward*r_cam_z - dp_sides*r_cam_x;
         self.p_cam_y = self.p_cam_y + dp_forward*r_cam_y + dp_up*r_cam_y;
 
-        self.process.write_value::<f32>(self.data_base_addr + 0x200, self.f_cam_x);
-        self.process.write_value::<f32>(self.data_base_addr + 0x204, self.f_cam_y);
-        self.process.write_value::<f32>(self.data_base_addr + 0x208, self.f_cam_z);
+        self.process.write_value::<f32>(self.data_base_addr + 0x200, self.f_cam_x, true);
+        self.process.write_value::<f32>(self.data_base_addr + 0x204, self.f_cam_y, true);
+        self.process.write_value::<f32>(self.data_base_addr + 0x208, self.f_cam_z, true);
 
-        self.process.write_value::<f32>(self.data_base_addr + 0x220, self.p_cam_x);
-        self.process.write_value::<f32>(self.data_base_addr + 0x224, self.p_cam_y);
-        self.process.write_value::<f32>(self.data_base_addr + 0x228, self.p_cam_z);
+        self.process.write_value::<f32>(self.data_base_addr + 0x220, self.p_cam_x, true);
+        self.process.write_value::<f32>(self.data_base_addr + 0x224, self.p_cam_y, true);
+        self.process.write_value::<f32>(self.data_base_addr + 0x228, self.p_cam_z, true);
 
         // TODO: Generalizar esto
         self.process.write_value::<[f32; 3]>(self.data_base_addr+0x240,
-            [0., 1., 0.]);
+            [0., 1., 0.], true);
     }
 
     pub fn deattach(&self) {
-        self.process.write_value::<u32>(self.data_base_addr + 0x1F0, 1);
+        self.process.write_value::<u32>(self.data_base_addr + 0x1F0, 1, true);
         for injection in &self.injections {
-            self.process.write_aob(injection.entry_point, &injection.f_rep);
+            self.process.write_aob(injection.entry_point, &injection.f_rep, false);
         }
     }
 
     pub fn attach(&self) {
-        self.process.write_value::<u32>(self.data_base_addr + 0x1F0, 0);
+        self.process.write_value::<u32>(self.data_base_addr + 0x1F0, 0, true);
         for injection in &self.injections {
-            self.process.write_aob(injection.entry_point, &injection.f_orig);
+            self.process.write_aob(injection.entry_point, &injection.f_orig, false);
         }
     }
 }
