@@ -1,16 +1,16 @@
+use crate::common::{Camera, Injection};
 use memory_rs::process::process_wrapper::Process;
-use winapi::um::winuser;
-use winapi::um::winuser::{GetCursorPos, SetCursorPos, GetAsyncKeyState};
-use winapi::shared::windef::{POINT};
+use std::f32;
 use std::io::Error;
 use std::thread;
 use std::time::{Duration, Instant};
-use std::f32;
-use crate::common::{Camera, Injection};
+use winapi::shared::windef::POINT;
+use winapi::um::winuser;
+use winapi::um::winuser::{GetAsyncKeyState, GetCursorPos, SetCursorPos};
 
 const INITIAL_POS: i32 = 500;
 
-extern {
+extern "C" {
     static get_camera_data: u8;
     static get_camera_data_end: u8;
 
@@ -30,7 +30,8 @@ pub fn main() -> Result<(), Error> {
     let mut latest_x = 0;
     let mut latest_y = 0;
 
-    println!("
+    println!(
+        "
     INSTRUCTIONS:
 
     PAUSE/L2 + X - Activate/Deactivate Free Camera
@@ -51,7 +52,8 @@ pub fn main() -> Result<(), Error> {
     WARNING: If you're in freeroam and you stop hearing audio, it's probably
     because you have the paused option activated, simply press END to deactivate it.
 
-    ");
+    "
+    );
 
     println!("Waiting for the game to start");
     let yakuza = loop {
@@ -65,12 +67,23 @@ pub fn main() -> Result<(), Error> {
     println!("Game hooked");
 
     let entry_point: usize = 0x18FD38;
-    let p_shellcode = unsafe { yakuza.inject_shellcode(entry_point, 5,
-        &get_camera_data as *const u8, &get_camera_data_end as *const u8) };
+    let p_shellcode = unsafe {
+        yakuza.inject_shellcode(
+            entry_point,
+            5,
+            &get_camera_data as *const u8,
+            &get_camera_data_end as *const u8,
+        )
+    };
 
-    let p_controller = unsafe { yakuza.inject_shellcode(0xEC1F, 6,
-        &get_controller_input as *const u8,
-        &get_controller_input_end as *const u8) };
+    let p_controller = unsafe {
+        yakuza.inject_shellcode(
+            0xEC1F,
+            6,
+            &get_controller_input as *const u8,
+            &get_controller_input_end as *const u8,
+        )
+    };
 
     let mut cam = Camera::new(&yakuza, p_shellcode);
 
@@ -80,7 +93,7 @@ pub fn main() -> Result<(), Error> {
     cam.injections.push(Injection {
         entry_point: 0x187616,
         f_orig: vec![0xF3, 0x0F, 0x11, 0x89, 0xAC, 0x00, 0x00, 0x00],
-        f_rep: vec![0x90; 8]
+        f_rep: vec![0x90; 8],
     });
 
     // WIP: Pause the cinematics of the world.
@@ -110,20 +123,21 @@ pub fn main() -> Result<(), Error> {
         unsafe { GetCursorPos(&mut mouse_pos) };
         let duration = start.elapsed().as_millis() as f32;
 
-        let speed_x = ((mouse_pos.x - latest_x) as f32)/duration;
-        let speed_y = ((mouse_pos.y - latest_y) as f32)/duration;
+        let speed_x = ((mouse_pos.x - latest_x) as f32) / duration;
+        let speed_y = ((mouse_pos.y - latest_y) as f32) / duration;
 
-        let controller_structure_p: usize = yakuza.read_value(p_controller+0x200, true);
+        let controller_structure_p: usize = yakuza.read_value(p_controller + 0x200, true);
         let controller_state = match controller_structure_p {
             0 => 0,
-            _ => yakuza.read_value::<u64>(controller_structure_p, true)
+            _ => yakuza.read_value::<u64>(controller_structure_p, true),
         };
 
         if capture_mouse {
             cam.update_position(0., 0., speed_x, speed_y);
 
             if controller_structure_p != 0 {
-                let [pos_x, pos_y, pitch, yaw] = yakuza.read_value::<[f32; 4]>(controller_structure_p+0x10, true);
+                let [pos_x, pos_y, pitch, yaw] =
+                    yakuza.read_value::<[f32; 4]>(controller_structure_p + 0x10, true);
 
                 let detect_fov = controller_state & 0x30;
                 if detect_fov == 0x20 {
@@ -142,8 +156,9 @@ pub fn main() -> Result<(), Error> {
         // to scroll infinitely
         restart_mouse = !restart_mouse;
         unsafe {
-            if detect_activation_by_controller(controller_state, 0x11) || 
-                (GetAsyncKeyState(winuser::VK_PAUSE) as u32 & 0x8000) != 0 {
+            if detect_activation_by_controller(controller_state, 0x11)
+                || (GetAsyncKeyState(winuser::VK_PAUSE) as u32 & 0x8000) != 0
+            {
                 active = !active;
                 capture_mouse = active;
                 let c_status = if active { "Deattached" } else { "Attached" };
@@ -158,13 +173,18 @@ pub fn main() -> Result<(), Error> {
 
             if active & (GetAsyncKeyState(winuser::VK_DELETE) as u32 & 0x8000 != 0) {
                 capture_mouse = !capture_mouse;
-                let c_status = if !capture_mouse { "Deattached" } else { "Attached" };
+                let c_status = if !capture_mouse {
+                    "Deattached"
+                } else {
+                    "Attached"
+                };
                 println!("status of mouse: {}", c_status);
                 thread::sleep(Duration::from_millis(500));
             }
 
-            if detect_activation_by_controller(controller_state, 0x14) ||
-                (GetAsyncKeyState(winuser::VK_END) as u32 & 0x8000) != 0 {
+            if detect_activation_by_controller(controller_state, 0x14)
+                || (GetAsyncKeyState(winuser::VK_END) as u32 & 0x8000) != 0
+            {
                 pause_world = !pause_world;
                 println!("status of pausing: {}", pause_world);
                 if pause_world {
