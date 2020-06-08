@@ -40,9 +40,10 @@ pub fn main() -> Result<(), Error> {
 
     W, A, S, D/Left Stick - Move the camera
     Mouse/Right Stick - Point the camera
+    CTRL, SPACE/TRIANGLE, X - Move UP or DOWN
 
-    CTRL, SPACE - Move UP or DOWN
-    PG UP, PG DOWN - Increase/Decrease speed multiplier
+    PG UP, PG DOWN/DPAD UP, DPAD DOWN - Increase/Decrease speed multiplier
+    DPAD LEFT, DPAD RIGHT - Increase/Decrease Right Stick Sensitivity
     F1, F2/L2, R2 - Increase/Decrease FOV respectively
 
     WARNING: Once you deattach the camera (PAUSE), your mouse will be set in a fixed
@@ -132,21 +133,42 @@ pub fn main() -> Result<(), Error> {
             _ => yakuza.read_value::<u64>(controller_structure_p, true),
         };
 
-        if capture_mouse {
-            cam.update_position(0., 0., speed_x, speed_y);
+        if active && capture_mouse {
+            cam.update_position(speed_x, speed_y);
+            unsafe { cam.handle_keyboard_input() };
+        }
 
-            if controller_structure_p != 0 {
-                let [pos_x, pos_y, pitch, yaw] =
-                    yakuza.read_value::<[f32; 4]>(controller_structure_p + 0x10, true);
+        if active && (controller_structure_p != 0) {
+            let [pos_x, pos_y, pitch, yaw] =
+                yakuza.read_value::<[f32; 4]>(controller_structure_p + 0x10, true);
 
-                // L1 & R1 check
-                match controller_state & 0x30 {
-                    0x20 => cam.update_fov(0.01),
-                    0x10 => cam.update_fov(-0.01),
-                    _ => ()
-                };
-                cam.update_position(-pos_x, -pos_y, pitch, yaw);
-            }
+            // L1 & R1 check
+            match controller_state & 0x30 {
+                0x20 => cam.update_fov(0.01),
+                0x10 => cam.update_fov(-0.01),
+                _ => ()
+            };
+
+            let speed: i8 = match controller_state & 0x3000 {
+                0x1000 => 1,
+                0x2000 => -1,
+                _ => 0
+            };
+
+            let dp_up = match controller_state & 0x9 {
+                0x8 => 2f32,
+                0x1 => -2f32,
+                _ => 0f32
+            };
+
+            let dir_speed = match controller_state & 0xC000 {
+                0x8000 => 1,
+                0x4000 => -1,
+                _ => 0
+            };
+
+            cam.update_values(-pos_y, -pos_x, dp_up, speed, dir_speed, 0); //dp_up, speed, dir_speed, rotation);
+            cam.update_position(pitch, yaw);
         }
 
         latest_x = mouse_pos.x;
@@ -159,7 +181,11 @@ pub fn main() -> Result<(), Error> {
                 || (GetAsyncKeyState(winuser::VK_PAUSE) as u32 & 0x8000) != 0
             {
                 active = !active;
-                capture_mouse = active;
+
+                if (controller_state & 0x11 == 0x11) {
+                    capture_mouse = active;
+                }
+
                 let c_status = if active { "Deattached" } else { "Attached" };
                 println!("status of camera: {}", c_status);
                 if active {
