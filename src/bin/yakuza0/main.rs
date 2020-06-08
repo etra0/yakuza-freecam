@@ -1,4 +1,4 @@
-use crate::common::{Camera, Injection};
+use rakuza::common::{Camera, Injection};
 use memory_rs::process::process_wrapper::Process;
 use std::f32;
 use std::io::Error;
