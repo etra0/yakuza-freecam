@@ -1,0 +1,19 @@
+[package]
+name = "kiwami2"
+version = "0.1.0"
+authors = ["Sebastian"]
+edition = "2018"
+build = "build.rs"
+
+[dependencies]
+common = { path = "../common" }
+memory-rs = { git = "https://github.com/etra0/memory-rs"}
+winapi = { version = "0.3.8", features = ["winuser", "impl-default"] }
+
+[build-dependencies]
+winres = "0.1"
+cc = "1.0"
+
+[[bin]]
+name = "kiwami2-freecam"
+path = "src/main.rs"

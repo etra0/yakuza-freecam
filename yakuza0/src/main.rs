@@ -1,4 +1,4 @@
-use crate::common::{Camera, Injection};
+use common::common::{Camera, Injection};
 use memory_rs::process::process_wrapper::Process;
 use std::f32;
 use std::io::Error;
@@ -16,6 +16,11 @@ extern "C" {
 
     static get_controller_input: u8;
     static get_controller_input_end: u8;
+}
+
+fn detect_activation_by_controller(value: u64, activation: u64) -> bool {
+    let result = value & activation;
+    return result == activation;
 }
 
 pub fn main() -> Result<(), Error> {
@@ -47,12 +52,13 @@ pub fn main() -> Result<(), Error> {
 
     WARNING: If you're in freeroam and you stop hearing audio, it's probably
     because you have the paused option activated, simply press END to deactivate it.
+
     "
     );
 
     println!("Waiting for the game to start");
     let yakuza = loop {
-        match Process::new("YakuzaKiwami.exe") {
+        match Process::new("Yakuza0.exe") {
             Ok(p) => break p,
             Err(_) => (),
         }
@@ -61,12 +67,11 @@ pub fn main() -> Result<(), Error> {
     };
     println!("Game hooked");
 
-    let entry_point: usize = 0x30CC33;
-    let entry_point_size: usize = 8;
+    let entry_point: usize = 0x18FD38;
     let p_shellcode = unsafe {
         yakuza.inject_shellcode(
             entry_point,
-            entry_point_size,
+            5,
             &get_camera_data as *const u8,
             &get_camera_data_end as *const u8,
         )
@@ -74,7 +79,7 @@ pub fn main() -> Result<(), Error> {
 
     let p_controller = unsafe {
         yakuza.inject_shellcode(
-            0x18C00B,
+            0xEC1F,
             6,
             &get_controller_input as *const u8,
             &get_controller_input_end as *const u8,
@@ -85,6 +90,7 @@ pub fn main() -> Result<(), Error> {
 
     // function that changes the focal length of the cinematics, when
     // active, nop this
+
     cam.injections.push(Injection {
         entry_point: 0x187616,
         f_orig: vec![0xF3, 0x0F, 0x11, 0x89, 0xAC, 0x00, 0x00, 0x00],
@@ -92,9 +98,9 @@ pub fn main() -> Result<(), Error> {
     });
 
     // WIP: Pause the cinematics of the world.
-    let pause_cinematic_f: Vec<u8> = vec![0x41, 0x8A, 0x8D, 0xD1, 0x00, 0x00, 0x00];
+    let pause_cinematic_f: Vec<u8> = vec![0x41, 0x8A, 0x8E, 0xC9, 0x00, 0x00, 0x00];
     let pause_cinematic_rep: Vec<u8> = vec![0xB1, 0x01, 0x90, 0x90, 0x90, 0x90, 0x90];
-    let pause_cinematic_offset = 0x7BB8C;
+    let pause_cinematic_offset = 0xB720DE;
     let mut pause_world = false;
 
     let mut active = false;
@@ -118,8 +124,8 @@ pub fn main() -> Result<(), Error> {
         unsafe { GetCursorPos(&mut mouse_pos) };
         let duration = start.elapsed().as_millis() as f32;
 
-        let speed_x = ((mouse_pos.x - latest_x) as f32) / duration / 100.;
-        let speed_y = ((mouse_pos.y - latest_y) as f32) / duration / 100.;
+        let speed_x = ((mouse_pos.x - latest_x) as f32) / duration;
+        let speed_y = ((mouse_pos.y - latest_y) as f32) / duration;
 
         let controller_structure_p: usize = yakuza.read_value(p_controller + 0x200, true);
         let controller_state = match controller_structure_p {
@@ -171,11 +177,12 @@ pub fn main() -> Result<(), Error> {
         // to scroll infinitely
         restart_mouse = !restart_mouse;
         unsafe {
-            if (controller_state & 0x11 == 0x11)
+            if detect_activation_by_controller(controller_state, 0x11)
                 || (GetAsyncKeyState(winuser::VK_PAUSE) as u32 & 0x8000) != 0
             {
                 active = !active;
-                if (controller_state & 0x11 == 0x11) {
+
+                if controller_state & 0x11 == 0x11 {
                     capture_mouse = active;
                 }
 
@@ -200,7 +207,7 @@ pub fn main() -> Result<(), Error> {
                 thread::sleep(Duration::from_millis(500));
             }
 
-            if (controller_state & 0x14 == 0x14)
+            if detect_activation_by_controller(controller_state, 0x14)
                 || (GetAsyncKeyState(winuser::VK_END) as u32 & 0x8000) != 0
             {
                 pause_world = !pause_world;

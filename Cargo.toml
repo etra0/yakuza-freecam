@@ -1,33 +1,7 @@
-[package]
-name = "rakuza"
-version = "0.1.0"
-authors = ["Sebastian"]
-edition = "2018"
-build = "build.rs"
-
-[features]
-kiwami2 = []
-kiwami = []
-
-[dependencies]
-memory-rs = { path = ".\\memory-rs"}
-winapi = { version = "0.3.8", features = ["winuser", "impl-default"] }
-
-[build-dependencies]
-winres = "0.1"
-cc = "1.0"
-
-[[bin]]
-name = "yakuza0-freecam"
-path = "src/main.rs"
-
-[[bin]]
-name = "kiwami-freecam"
-path = "src/main.rs"
-required-features = ["kiwami"]
-
-[[bin]]
-name = "kiwami2-freecam"
-path = "src/main.rs"
-required-features = ["kiwami2"]
-
+[workspace]
+members = [
+  "common",
+  "yakuza0",
+  "kiwami",
+  "kiwami2"
+]
