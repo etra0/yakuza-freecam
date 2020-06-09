@@ -19,17 +19,18 @@ jobs:
       # ...
       - name: "Build Yakuza 0"
         run: |
-          cargo.exe build --bin yakuza0-freecam --release
+          cargo.exe build -p yakuza0 --release
 
       - name: "Build Yakuza Kiwami"
         run: |
-          cargo.exe build --bin kiwami-freecam --features kiwami --release
+          cargo.exe build -p kiwami --release
 
       - name: "Build Yakuza Kiwami 2"
         run: |
-          cargo.exe build --bin kiwami2-freecam --features kiwami2 --release
+          cargo.exe build -p kiwami2 --release
 
-      - uses: "marvinpinto/action-automatic-releases@latest"
+      - name: "Automatic Release"
+        uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           automatic_release_tag: "latest"

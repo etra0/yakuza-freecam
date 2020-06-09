@@ -1,5 +1,5 @@
 [package]
-name = "yakuza0-freecam"
+name = "yakuza0"
 version = "0.1.0"
 authors = ["Sebastian"]
 edition = "2018"
@@ -13,3 +13,7 @@ winapi = { version = "0.3.8", features = ["winuser", "impl-default"] }
 [build-dependencies]
 winres = "0.1"
 cc = "1.0"
+
+[[bin]]
+name = "yakuza0-freecam"
+path = "src/main.rs"
