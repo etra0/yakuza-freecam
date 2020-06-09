@@ -7,21 +7,43 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7bbb73db36c1246e9034e307d0fba23f9a2e251faa47ade70c1bd252220c8311"
 
 [[package]]
-name = "memory-rs"
-version = "0.1.0"
-source = "git+https://github.com/etra0/memory-rs#8ec8bf8b97bd2d4d1a9b2cb6d5d3a7eb9caaafe2"
-dependencies = [
- "winapi",
-]
-
-[[package]]
-name = "rakuza"
+name = "common"
 version = "0.1.0"
 dependencies = [
  "cc",
  "memory-rs",
  "winapi",
  "winres",
+]
+
+[[package]]
+name = "kiwami-freecam"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "common",
+ "memory-rs",
+ "winapi",
+ "winres",
+]
+
+[[package]]
+name = "kiwami2"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "common",
+ "memory-rs",
+ "winapi",
+ "winres",
+]
+
+[[package]]
+name = "memory-rs"
+version = "0.1.0"
+source = "git+https://github.com/etra0/memory-rs#8ec8bf8b97bd2d4d1a9b2cb6d5d3a7eb9caaafe2"
+dependencies = [
+ "winapi",
 ]
 
 [[package]]
@@ -68,4 +90,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff4fb510bbfe5b8992ff15f77a2e6fe6cf062878f0eda00c0f44963a807ca5dc"
 dependencies = [
  "toml",
+]
+
+[[package]]
+name = "yakuza0-freecam"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "common",
+ "memory-rs",
+ "winapi",
+ "winres",
 ]

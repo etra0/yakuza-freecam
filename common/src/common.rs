@@ -1,6 +1,4 @@
 use memory_rs::process::process_wrapper::Process;
-use std::thread;
-use std::time::Duration;
 use winapi::um::winuser;
 
 // TODO: Fix this pub stuff

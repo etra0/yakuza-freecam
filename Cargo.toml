@@ -1,26 +1,7 @@
-[package]
-name = "rakuza"
-version = "0.1.0"
-authors = ["Sebastian"]
-edition = "2018"
-build = "build.rs"
-
-[dependencies]
-memory-rs = { git = "https://github.com/etra0/memory-rs"}
-winapi = { version = "0.3.8", features = ["winuser", "impl-default"] }
-
-[build-dependencies]
-winres = "0.1"
-cc = "1.0"
-
-[[bin]]
-name = "yakuza0-freecam"
-path = "src/bin/yakuza0/main.rs"
-
-[[bin]]
-name = "kiwami-freecam"
-path = "src/bin/kiwami/main.rs"
-
-[[bin]]
-name = "kiwami2-freecam"
-path = "src/bin/kiwami2/main.rs"
+[workspace]
+members = [
+  "common",
+  "yakuza0",
+  "kiwami",
+  "kiwami2"
+]
