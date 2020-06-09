@@ -2,6 +2,9 @@ name: "build-release"
 
 on:
   push:
+    paths-ignore: 
+      - '**.yml'
+      - '**.md'
     branches:
       - "master"
 
