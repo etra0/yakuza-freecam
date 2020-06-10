@@ -26,19 +26,19 @@ You should see a Command Prompt window with instructions. If one briefly flashes
 Yakuza Zero:
 
 ```
-cargo build --bin yakuza-freecam --release
+cargo build -p yakuza0 --release
 ```
 
 Yakuza Kiwami:
 
 ```
-cargo build --bin kiwami-freecam --features kiwami --release
+cargo build -p kiwami --release
 ```
 
 Yakuza Kiwami 2:
 
 ```
-cargo build --bin kiwami2-freecam --features kiwami2 --release
+cargo build -p kiwami2 --release
 ```
 
 
