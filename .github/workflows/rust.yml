@@ -2,9 +2,10 @@ name: "build-release"
 
 on:
   push:
-    paths-ignore: 
-      - '**.yml'
-      - '**.md'
+    paths: 
+      - '**.rs'
+      - '**.lock'
+      - '**.toml'
     branches:
       - "master"
 
