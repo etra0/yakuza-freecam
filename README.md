@@ -5,7 +5,9 @@
 
 ![Kiryu](https://i.imgur.com/s9Od0q4.jpg)
 
-This is a revamped and rewritten camera tool for the Yakuza 0, Kiwami and Kiwami 2. It works in Cutscenes and freeroam.
+This is a free camera tool for Yakuza 0, Kiwami and Kiwami 2. It works in Cutscenes and freeroam.
+
+[DEMO](https://twitter.com/etra0/status/1264050436031623169)
 
 # This only works with the Steam version
 
