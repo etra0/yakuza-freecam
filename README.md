@@ -3,7 +3,7 @@
 
 <a href='https://ko-fi.com/U7U81LC5Q' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://cdn.ko-fi.com/cdn/kofi3.png?v=2' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
 
-![Kiryu](https://i.imgur.com/s9Od0q4.jpg)
+![Kiryu](https://raw.githubusercontent.com/etra0/yakuza-freecam/master/assets/cover.png)
 
 This is a free camera tool for Yakuza 0, Kiwami and Kiwami 2. It works in Cutscenes and freeroam.
 
