@@ -182,7 +182,7 @@ pub fn main() -> Result<(), Error> {
             {
                 active = !active;
 
-                if controller_state & 0x11 == 0x11 {
+                if controller_state & 0x11 != 0x11 {
                     capture_mouse = active;
                 }
 

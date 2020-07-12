@@ -175,7 +175,7 @@ pub fn main() -> Result<(), Error> {
                 || (GetAsyncKeyState(winuser::VK_PAUSE) as u32 & 0x8000) != 0
             {
                 active = !active;
-                if controller_state & 0x11 == 0x11 {
+                if controller_state & 0x11 != 0x11 {
                     capture_mouse = active;
                 }
 
