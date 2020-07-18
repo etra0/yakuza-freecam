@@ -56,6 +56,7 @@ pub fn main() -> Result<(), Error> {
     PG UP, PG DOWN/DPAD UP, DPAD DOWN - Increase/Decrease speed multiplier
     DPAD LEFT, DPAD RIGHT - Increase/Decrease Right Stick Sensitivity
     F1, F2/L2, R2 - Increase/Decrease FOV respectively
+    L1, R1 - Rotate the camera
 
     WARNING: Don't forget to deactivate the freecam before skipping a cutscene
     (it may cause a game freeze)
@@ -213,6 +214,7 @@ pub fn main() -> Result<(), Error> {
             let rotation: i8 = match controller_state & 0xC0 {
                 0x40 => 1,
                 0x80 => -1,
+                0xC0 => 2,
                 _ => 0
             };
 
@@ -246,6 +248,7 @@ pub fn main() -> Result<(), Error> {
                 trigger_pause(&yakuza, c_v_a);
                 thread::sleep(Duration::from_millis(500));
             }
+
             if (GetAsyncKeyState(winuser::VK_HOME) as u32 & 0x8000) != 0 {
                 active = !active;
                 capture_mouse = active;

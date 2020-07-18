@@ -1,5 +1,6 @@
 use memory_rs::process::process_wrapper::Process;
 use winapi::um::winuser;
+use nalgebra_glm as glm;
 
 // TODO: Fix this pub stuff
 pub struct Injection {
@@ -79,6 +80,18 @@ impl Camera<'_> {
         let r_cam_y = r * phi.cos();
 
         (r_cam_x, r_cam_z, r_cam_y)
+    }
+
+    pub fn calculate_rotation(focus: glm::Vec3, pos: glm::Vec3, rotation: f32) -> [f32; 3] {
+        let up = glm::vec3(0., 1., 0.);
+
+        let m_look_at = glm::look_at(&focus, &pos, &up);
+        let axis = glm::vec3(0., 0., 1.);
+        let m_new = glm::rotate_normalized_axis(&m_look_at, rotation, &axis);
+
+        let result = m_new.row(1);
+        
+        return [result[0], result[1], result[2]];
     }
 
     pub fn update_fov(&mut self, delta: f32) {
@@ -182,8 +195,9 @@ impl Camera<'_> {
         };
 
         match rotation {
-            1 => { self.rotation += 0.01; },
-            -1 => { self.rotation -= 0.01; },
+            1 => { self.rotation -= 0.01; },
+            -1 => { self.rotation += 0.01; },
+            2 => { self.rotation = 0.; },
             _ => ()
         };
     }
@@ -213,6 +227,12 @@ impl Camera<'_> {
             .process
             .read_value::<f32>(self.data_base_addr + 0x260, true);
 
+        let [up_x, up_y, up_z] = self
+            .process
+            .read_value::<[f32; 3]>(self.data_base_addr + 0x240, true);
+
+        let up_v = glm::vec3(up_x, up_y, up_z);
+
         let r_cam_x = self.f_cam_x - self.p_cam_x;
         let r_cam_y = self.f_cam_y - self.p_cam_y;
         let r_cam_z = self.f_cam_z - self.p_cam_z;
@@ -224,6 +244,11 @@ impl Camera<'_> {
         let (r_cam_x, r_cam_z, r_cam_y) =
             Camera::calc_new_focus_point(r_cam_x, r_cam_z, r_cam_y, yaw, pitch);
 
+        let pf = glm::vec3(self.f_cam_x, self.f_cam_y, self.f_cam_z);
+        let pp = glm::vec3(self.p_cam_x, self.p_cam_y, self.p_cam_z);
+
+        let up_new = Camera::calculate_rotation(pf, pp, self.rotation);
+        let up_v = up_new;
 
         self.f_cam_x = self.p_cam_x + r_cam_x + self.dp_forward * r_cam_x + self.dp_sides * r_cam_z;
         self.f_cam_z = self.p_cam_z + r_cam_z + self.dp_forward * r_cam_z - self.dp_sides * r_cam_x;
@@ -254,7 +279,7 @@ impl Camera<'_> {
 
         // TODO: Generalizar esto
         self.process
-            .write_value::<[f32; 3]>(self.data_base_addr + 0x240, [0., 1., 0.], true);
+            .write_value::<[f32; 3]>(self.data_base_addr + 0x240, up_v, true);
     }
 
     pub fn deattach(&self) {
