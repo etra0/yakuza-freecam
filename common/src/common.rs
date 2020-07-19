@@ -86,8 +86,12 @@ impl Camera<'_> {
         let up = glm::vec3(0., 1., 0.);
 
         let m_look_at = glm::look_at(&focus, &pos, &up);
-        let axis = glm::vec3(0., 0., 1.);
-        let m_new = glm::rotate_normalized_axis(&m_look_at, rotation, &axis);
+        let direction = {
+            let row = m_look_at.row(2);
+            glm::vec3(row[0], row[1], row[2])
+        };
+        // let axis = glm::vec3(0., 0., 1.);
+        let m_new = glm::rotate_normalized_axis(&m_look_at, rotation, &direction);
 
         let result = m_new.row(1);
         
