@@ -161,7 +161,14 @@ pub fn main() -> Result<(), Error> {
                 _ => 0
             };
 
-            cam.update_values(-pos_y, -pos_x, dp_up, speed, dir_speed, 0); //dp_up, speed, dir_speed, rotation);
+            let rotation: i8 = match controller_state & 0xC0 {
+                0x40 => 1,
+                0x80 => -1,
+                0xC0 => 2,
+                _ => 0
+            };
+
+            cam.update_values(-pos_y, -pos_x, dp_up, speed, dir_speed, rotation); //dp_up, speed, dir_speed, rotation);
             cam.update_position(pitch, yaw);
         }
 
