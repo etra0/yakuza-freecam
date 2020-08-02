@@ -116,6 +116,7 @@ impl Camera<'_> {
         let mut dp_up = 0f32;
         let mut speed_scale: i8 = 0;
         let mut dir_speed: i8 = 0;
+        let mut rotation: i8 = 0;
 
         if (winuser::GetAsyncKeyState(0x57) as u32 & 0x8000) != 0 {
             dp_forward = 1.;
@@ -161,7 +162,15 @@ impl Camera<'_> {
             dir_speed = 1;
         }
 
-        self.update_values(dp_forward, dp_sides, dp_up, speed_scale, dir_speed, 0);
+        if (winuser::GetAsyncKeyState(0x51) as u32 & 0x8000) != 0 {
+            rotation = -1;
+        }
+
+        if (winuser::GetAsyncKeyState(0x45) as u32 & 0x8000) != 0 {
+            rotation = 1;
+        }
+
+        self.update_values(dp_forward, dp_sides, dp_up, speed_scale, dir_speed, rotation);
     }
 
     pub fn update_values(&mut self, dp_forward: f32, dp_sides: f32, dp_up: f32,

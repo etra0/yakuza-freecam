@@ -56,7 +56,7 @@ pub fn main() -> Result<(), Error> {
     PG UP, PG DOWN/DPAD UP, DPAD DOWN - Increase/Decrease speed multiplier
     DPAD LEFT, DPAD RIGHT - Increase/Decrease Right Stick Sensitivity
     F1, F2/L2, R2 - Increase/Decrease FOV respectively
-    L1, R1 - Rotate the camera
+    Q, E/L1, R1 - Rotate the camera
 
     WARNING: Don't forget to deactivate the freecam before skipping a cutscene
     (it may cause a game freeze)
