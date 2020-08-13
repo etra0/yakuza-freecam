@@ -300,7 +300,6 @@ impl Camera<'_> {
         self.process
             .write_value::<f32>(self.data_base_addr + 0x228, self.p_cam_z, true);
 
-        // TODO: Generalizar esto
         self.process
             .write_value::<[f32; 3]>(self.data_base_addr + 0x240, up_v, true);
     }

@@ -1,18 +1,13 @@
-name: "build-release"
+name: "build-dev"
 
 on:
   push:
-    paths: 
-      - '**.rs'
-      - '**.lock'
-      - '**.toml'
-      - '**.yml'
     branches:
-      - "master"
+      - "dev"
 
 jobs:
   build-release:
-    name: "Build & Release"
+    name: "Build Dev Version"
     runs-on: "windows-latest"
 
     steps:
@@ -41,8 +36,8 @@ jobs:
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "latest"
-          prerelease: false
+          automatic_release_tag: "dev"
+          prerelease: true
           title: "Latest release"
           files: |
             target/release/*.exe
