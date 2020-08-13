@@ -8,6 +8,7 @@ on:
       - '**.toml'
     branches:
       - "master"
+      - "dev"
 
 jobs:
   build-release:
