@@ -1,6 +1,6 @@
 [package]
 name = "kiwami"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Sebastian"]
 edition = "2018"
 build = "build.rs"

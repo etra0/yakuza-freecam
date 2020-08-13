@@ -21,6 +21,11 @@ jobs:
           submodules: true
           token: ${{ secrets.GITHUB_TOKEN }}
       # ...
+      - name: "Set version"
+        id: vars
+        run: |
+          Set-Variable GIT_VERSION (git rev-parse --short HEAD)
+
       - name: "Build Yakuza 0"
         run: |
           cargo.exe build -p yakuza0 --release

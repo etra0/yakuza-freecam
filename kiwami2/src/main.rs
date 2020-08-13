@@ -1,4 +1,4 @@
-use common::common::{Camera, Injection};
+use common::common::{Camera, Injection, get_version};
 use memory_rs::process::process_wrapper::Process;
 use std::f32;
 use std::io::Error;
@@ -42,6 +42,7 @@ pub fn main() -> Result<(), Error> {
     let mut latest_x = 0;
     let mut latest_y = 0;
 
+    println!("Yakuza Kiwami 2 Freecam v{} by @etra0", get_version());
     println!(
         "
     INSTRUCTIONS:
