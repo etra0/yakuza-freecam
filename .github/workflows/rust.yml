@@ -23,9 +23,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       # ...
       - name: "Set version"
-        id: vars
         run: |
-          Set-Variable GIT_VERSION (git rev-parse --short HEAD)
+          [System.Environment]::SetEnvironmentVariable('GIT_VERSION',(git rev-parse --short HEAD),[System.EnvironmentVariableTarget]::User)
 
       - name: "Build Yakuza 0"
         run: |
