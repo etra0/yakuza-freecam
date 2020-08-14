@@ -16,21 +16,20 @@ jobs:
         with:
           submodules: true
           token: ${{ secrets.GITHUB_TOKEN }}
-      # ...
-      - name: "Set Version"
-        run: |
-          setx GIT_VERSION (git rev-parse --short HEAD) | Out-String
 
       - name: "Build Yakuza 0"
         run: |
+          $env:GIT_VERSION = (git rev-parse --short HEAD) | Out-String
           cargo.exe build -p yakuza0 --release
 
       - name: "Build Yakuza Kiwami"
         run: |
+          $env:GIT_VERSION = (git rev-parse --short HEAD) | Out-String
           cargo.exe build -p kiwami --release
 
       - name: "Build Yakuza Kiwami 2"
         run: |
+          $env:GIT_VERSION = (git rev-parse --short HEAD) | Out-String
           cargo.exe build -p kiwami2 --release
 
       - name: "Automatic Release"
