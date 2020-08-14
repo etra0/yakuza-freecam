@@ -12,7 +12,6 @@ pub fn get_version() -> String {
     return format!("{}.{}", cargo, git);
 }
 
-// TODO: Fix this pub stuff
 pub struct Injection {
     pub entry_point: usize,
     // Original bytes
@@ -300,7 +299,6 @@ impl Camera<'_> {
         self.process
             .write_value::<f32>(self.data_base_addr + 0x228, self.p_cam_z, true);
 
-        // TODO: Generalizar esto
         self.process
             .write_value::<[f32; 3]>(self.data_base_addr + 0x240, up_v, true);
     }
