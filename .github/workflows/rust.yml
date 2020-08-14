@@ -6,6 +6,7 @@ on:
       - '**.rs'
       - '**.lock'
       - '**.toml'
+      - '**.yml'
     branches:
       - "master"
       - "dev"
