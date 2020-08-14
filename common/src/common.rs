@@ -4,7 +4,8 @@ use nalgebra_glm as glm;
 
 const CARGO_VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 const GIT_VERSION: Option<&'static str> = option_env!("GIT_VERSION");
-fn get_version() -> String {
+
+pub fn get_version() -> String {
     let cargo = CARGO_VERSION.unwrap_or("Unknown");
     let git = GIT_VERSION.unwrap_or("Unknown");
 

@@ -25,8 +25,7 @@ jobs:
       - name: "Set version"
         id: vars
         run: |
-          echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
-          Set-Variable GIT_VERSION ${{ steps.vars.outputs.sha_short }}
+          Set-Variable GIT_VERSION (git rev-parse --short HEAD)
 
       - name: "Build Yakuza 0"
         run: |
