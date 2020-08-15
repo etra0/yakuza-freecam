@@ -1,6 +1,8 @@
 use memory_rs::process::process_wrapper::Process;
 use winapi::um::winuser;
 use nalgebra_glm as glm;
+use std::thread;
+use std::time::Duration;
 
 const CARGO_VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 const GIT_VERSION: Option<&'static str> = option_env!("GIT_VERSION");
@@ -220,7 +222,7 @@ impl Camera<'_> {
         match rotation {
             1 => { self.rotation -= 0.01; },
             -1 => { self.rotation += 0.01; },
-            2 => { self.rotation = 0.; },
+            2 => { self.rotation = 0.; thread::sleep(Duration::from_millis(200)); },
             _ => ()
         };
     }
