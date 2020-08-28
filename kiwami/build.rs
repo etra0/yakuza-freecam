@@ -11,5 +11,4 @@ fn main() {
     println!("cargo:rerun-if-changed=interceptor.asm");
 
     res.compile().unwrap();
-
 }

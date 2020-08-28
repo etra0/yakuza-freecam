@@ -1,4 +1,4 @@
-use common::common::{Camera, Injection, get_version};
+use common::common::{get_version, Camera, Injection};
 use memory_rs::process::process_wrapper::Process;
 use std::f32;
 use std::io::Error;
@@ -23,7 +23,7 @@ extern "C" {
 
 fn detect_activation_by_controller(value: u64) -> bool {
     let result = value & 0x11;
-    return result == 0x11;
+    result == 0x11
 }
 
 fn trigger_pause(process: &Process, addr: usize) {
@@ -70,10 +70,9 @@ pub fn main() -> Result<(), Error> {
 
     println!("Waiting for the game to start");
     let yakuza = loop {
-        match Process::new("YakuzaKiwami2.exe") {
-            Ok(p) => break p,
-            Err(_) => (),
-        }
+        if let Ok(p) = Process::new("YakuzaKiwami2.exe") {
+            break p;
+        };
 
         thread::sleep(Duration::from_secs(5));
     };
@@ -183,7 +182,7 @@ pub fn main() -> Result<(), Error> {
             unsafe { cam.handle_keyboard_input() };
         }
 
-        if active && (controller_structure_p != 0x0){
+        if active && (controller_structure_p != 0x0) {
             let [pos_x, pos_y, pitch, yaw] =
                 yakuza.read_value::<[f32; 4]>(controller_structure_p + 0x10, true);
 
@@ -191,32 +190,32 @@ pub fn main() -> Result<(), Error> {
             match controller_state & 0x30 {
                 0x20 => cam.update_fov(0.01),
                 0x10 => cam.update_fov(-0.01),
-                _ => ()
+                _ => (),
             };
 
             let dp_up = match controller_state & 0x9 {
                 0x01 => -2f32,
                 0x08 => 2f32,
-                _ => 0f32
+                _ => 0f32,
             };
 
             let speed: i8 = match controller_state & 0x3000 {
                 0x1000 => 1,
                 0x2000 => -1,
-                _ => 0
+                _ => 0,
             };
 
             let dir_speed: i8 = match controller_state & 0xC000 {
                 0x4000 => -1,
                 0x8000 => 1,
-                _ => 0
+                _ => 0,
             };
 
             let rotation: i8 = match controller_state & 0xC0 {
                 0x40 => 1,
                 0x80 => -1,
                 0xC0 => 2,
-                _ => 0
+                _ => 0,
             };
 
             cam.update_values(-pos_y, -pos_x, dp_up, speed, dir_speed, rotation);

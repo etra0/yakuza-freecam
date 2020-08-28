@@ -1,8 +1,6 @@
 use memory_rs::process::process_wrapper::Process;
-use winapi::um::winuser;
 use nalgebra_glm as glm;
-use std::thread;
-use std::time::Duration;
+use winapi::um::winuser;
 
 const CARGO_VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 const GIT_VERSION: Option<&'static str> = option_env!("GIT_VERSION");
@@ -51,8 +49,8 @@ pub struct Camera<'a> {
     pub injections: Vec<Injection>,
 }
 
-impl Camera<'_> {
-    pub fn new<'a>(process: &'a Process, data_base_addr: usize) -> Camera {
+impl<'a> Camera<'a> {
+    pub fn new(process: &'a Process, data_base_addr: usize) -> Camera {
         Camera {
             process,
             p_cam_x: 0f32,
@@ -106,8 +104,8 @@ impl Camera<'_> {
         let m_new = glm::rotate_normalized_axis(&m_look_at, rotation, &direction);
 
         let result = m_new.row(1);
-        
-        return [result[0], result[1], result[2]];
+
+        [result[0], result[1], result[2]]
     }
 
     pub fn update_fov(&mut self, delta: f32) {
@@ -182,11 +180,25 @@ impl Camera<'_> {
             rotation = 1;
         }
 
-        self.update_values(dp_forward, dp_sides, dp_up, speed_scale, dir_speed, rotation);
+        self.update_values(
+            dp_forward,
+            dp_sides,
+            dp_up,
+            speed_scale,
+            dir_speed,
+            rotation,
+        );
     }
 
-    pub fn update_values(&mut self, dp_forward: f32, dp_sides: f32, dp_up: f32,
-        speed_scale: i8, dir_speed_scale: i8, rotation: i8) {
+    pub fn update_values(
+        &mut self,
+        dp_forward: f32,
+        dp_sides: f32,
+        dp_up: f32,
+        speed_scale: i8,
+        dir_speed_scale: i8,
+        rotation: i8,
+    ) {
         self.dp_forward = dp_forward * self.speed_scale;
         self.dp_sides = dp_sides * self.speed_scale;
         self.dp_up = dp_up * self.speed_scale;
@@ -194,36 +206,42 @@ impl Camera<'_> {
         match speed_scale {
             1 => {
                 self.speed_scale += 5e-5;
-            },
+            }
             -1 => {
                 if self.speed_scale > 1e-5 {
                     self.speed_scale -= 5e-5;
                 } else {
                     println!("Speed couldn't decrease");
                 }
-            },
-            _ => ()
+            }
+            _ => (),
         };
 
         match dir_speed_scale {
             1 => {
                 self.dir_speed_scale += 5e-5;
-            },
+            }
             -1 => {
                 if self.dir_speed_scale > 1e-5 {
                     self.dir_speed_scale -= 5e-5;
                 } else {
                     println!("Speed couldn't decrease");
                 }
-            },
-            _ => ()
+            }
+            _ => (),
         };
 
         match rotation {
-            1 => { self.rotation -= 0.01; },
-            -1 => { self.rotation += 0.01; },
-            2 => { self.rotation = 0.; thread::sleep(Duration::from_millis(200)); },
-            _ => ()
+            1 => {
+                self.rotation -= 0.01;
+            }
+            -1 => {
+                self.rotation += 0.01;
+            }
+            2 => {
+                self.rotation = 0.;
+            }
+            _ => (),
         };
     }
 
@@ -252,19 +270,12 @@ impl Camera<'_> {
             .process
             .read_value::<f32>(self.data_base_addr + 0x260, true);
 
-        let [up_x, up_y, up_z] = self
-            .process
-            .read_value::<[f32; 3]>(self.data_base_addr + 0x240, true);
-
-        let up_v = glm::vec3(up_x, up_y, up_z);
-
         let r_cam_x = self.f_cam_x - self.p_cam_x;
         let r_cam_y = self.f_cam_y - self.p_cam_y;
         let r_cam_z = self.f_cam_z - self.p_cam_z;
 
         let pitch = pitch * self.dir_speed_scale;
         let yaw = yaw * self.dir_speed_scale;
-
 
         let (r_cam_x, r_cam_z, r_cam_y) =
             Camera::calc_new_focus_point(r_cam_x, r_cam_z, r_cam_y, yaw, pitch);
