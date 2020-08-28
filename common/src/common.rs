@@ -5,6 +5,8 @@ use winapi::um::winuser;
 const CARGO_VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 const GIT_VERSION: Option<&'static str> = option_env!("GIT_VERSION");
 
+/// Generate current version of the executable from the 
+/// latest git version and the cargo verison.
 pub fn get_version() -> String {
     let cargo = CARGO_VERSION.unwrap_or("Unknown");
     let git = GIT_VERSION.unwrap_or("Unknown");
@@ -12,6 +14,7 @@ pub fn get_version() -> String {
     return format!("{}.{}", cargo, git);
 }
 
+/// Keys that aren't contained in the VirtualKeys from the Windows API.
 #[repr(i32)]
 pub enum Keys {
     A = 0x41,
@@ -22,26 +25,33 @@ pub enum Keys {
     W = 0x57,
 }
 
+/// Struct that contains an entry point relative to the executable,
+/// the original bytes (`f_orig`) and the bytes to be injected (`f_rep`)
+/// 
 pub struct Injection {
+    /// Entry point relative to the executable
     pub entry_point: usize,
-    // Original bytes
+    /// Original bytes
     pub f_orig: Vec<u8>,
-    // Representation to be replaced in case kind == CHANGE
+    /// Bytes to be injected
     pub f_rep: Vec<u8>,
 }
 
+/// Main struct that will handle the camera behaviour.
 pub struct Camera<'a> {
     process: &'a Process,
-    // Camera position
+    /// Camera position in the lookAt version
     p_cam_x: f32,
     p_cam_y: f32,
     p_cam_z: f32,
 
-    // Camera focus position
+    /// Camera foocus on a lookAt version
     f_cam_x: f32,
     f_cam_y: f32,
     f_cam_z: f32,
 
+    /// Position differentials to be added according to user input.
+    /// (Basically what will move the camera)
     dp_forward: f32,
     dp_sides: f32,
     dp_up: f32,
@@ -50,7 +60,7 @@ pub struct Camera<'a> {
     dir_speed_scale: f32,
     rotation: f32,
 
-    // base address for the data
+    /// Pointer where the injection was allocated.
     data_base_addr: usize,
 
     fov: f32,
@@ -80,6 +90,7 @@ impl<'a> Camera<'a> {
         }
     }
 
+    /// Calculates the new lookAt using spherical coordinates.
     fn calc_new_focus_point(
         cam_x: f32,
         cam_z: f32,
