@@ -12,7 +12,16 @@ pub fn get_version() -> String {
     return format!("{}.{}", cargo, git);
 }
 
-// TODO: Fix this pub stuff
+#[repr(i32)]
+pub enum Keys {
+    A = 0x41,
+    D = 0x44,
+    E = 0x45,
+    Q = 0x51,
+    S = 0x53,
+    W = 0x57,
+}
+
 pub struct Injection {
     pub entry_point: usize,
     // Original bytes
@@ -128,17 +137,17 @@ impl<'a> Camera<'a> {
         let mut dir_speed: i8 = 0;
         let mut rotation: i8 = 0;
 
-        if (winuser::GetAsyncKeyState(0x57) as u32 & 0x8000) != 0 {
+        if (winuser::GetAsyncKeyState(Keys::W as i32) as u32 & 0x8000) != 0 {
             dp_forward = 1.;
         }
-        if (winuser::GetAsyncKeyState(0x53) as u32 & 0x8000) != 0 {
+        if (winuser::GetAsyncKeyState(Keys::S as i32) as u32 & 0x8000) != 0 {
             dp_forward = -1.;
         }
 
-        if (winuser::GetAsyncKeyState(0x41) as u32 & 0x8000) != 0 {
+        if (winuser::GetAsyncKeyState(Keys::A as i32) as u32 & 0x8000) != 0 {
             dp_sides = 1.;
         }
-        if (winuser::GetAsyncKeyState(0x44) as u32 & 0x8000) != 0 {
+        if (winuser::GetAsyncKeyState(Keys::D as i32) as u32 & 0x8000) != 0 {
             dp_sides = -1.;
         }
 
@@ -172,11 +181,11 @@ impl<'a> Camera<'a> {
             dir_speed = 1;
         }
 
-        if (winuser::GetAsyncKeyState(0x51) as u32 & 0x8000) != 0 {
+        if (winuser::GetAsyncKeyState(Keys::Q as i32) as u32 & 0x8000) != 0 {
             rotation = -1;
         }
 
-        if (winuser::GetAsyncKeyState(0x45) as u32 & 0x8000) != 0 {
+        if (winuser::GetAsyncKeyState(Keys::E as i32) as u32 & 0x8000) != 0 {
             rotation = 1;
         }
 
