@@ -148,56 +148,34 @@ impl<'a> Camera<'a> {
         let mut dir_speed: i8 = 0;
         let mut rotation: i8 = 0;
 
-        if (winuser::GetAsyncKeyState(Keys::W as i32) as u32 & 0x8000) != 0 {
-            dp_forward = 1.;
-        }
-        if (winuser::GetAsyncKeyState(Keys::S as i32) as u32 & 0x8000) != 0 {
-            dp_forward = -1.;
+        /// Handle positive and negative state of keypressing
+        macro_rules! handle_state {
+            ([ $key_pos:expr, $key_neg:expr, $var:ident, $val:expr ]; $($tt:tt)*) => {
+                handle_state!([$key_pos, $key_neg, $var = $val, $var = - $val]; $($tt)*);
+            };
+
+            ([ $key_pos:expr, $key_neg:expr, $pos_do:expr, $neg_do:expr ]; $($tt:tt)*) => {
+                if (winuser::GetAsyncKeyState($key_pos as i32) as u32 & 0x8000) != 0 {
+                    $pos_do;
+                }
+
+                if (winuser::GetAsyncKeyState($key_neg as i32) as u32 & 0x8000) != 0 {
+                    $neg_do;
+                }
+                handle_state!($($tt)*);
+            };
+
+            () => {}
         }
 
-        if (winuser::GetAsyncKeyState(Keys::A as i32) as u32 & 0x8000) != 0 {
-            dp_sides = 1.;
-        }
-        if (winuser::GetAsyncKeyState(Keys::D as i32) as u32 & 0x8000) != 0 {
-            dp_sides = -1.;
-        }
-
-        if (winuser::GetAsyncKeyState(winuser::VK_SPACE) as u32 & 0x8000) != 0 {
-            dp_up = 1.;
-        }
-        if (winuser::GetAsyncKeyState(winuser::VK_CONTROL) as u32 & 0x8000) != 0 {
-            dp_up = -1.;
-        }
-
-        if (winuser::GetAsyncKeyState(winuser::VK_F1) as u32 & 0x8000) != 0 {
-            self.update_fov(0.01);
-        }
-        if (winuser::GetAsyncKeyState(winuser::VK_F2) as u32 & 0x8000) != 0 {
-            self.update_fov(-0.01)
-        }
-
-        if (winuser::GetAsyncKeyState(winuser::VK_PRIOR) as u32 & 0x8000) != 0 {
-            speed_scale = 1;
-        }
-
-        if (winuser::GetAsyncKeyState(winuser::VK_NEXT) as u32 & 0x8000) != 0 {
-            speed_scale = -1;
-        }
-
-        if (winuser::GetAsyncKeyState(winuser::VK_F3) as u32 & 0x8000) != 0 {
-            dir_speed = -1;
-        }
-
-        if (winuser::GetAsyncKeyState(winuser::VK_F4) as u32 & 0x8000) != 0 {
-            dir_speed = 1;
-        }
-
-        if (winuser::GetAsyncKeyState(Keys::Q as i32) as u32 & 0x8000) != 0 {
-            rotation = -1;
-        }
-
-        if (winuser::GetAsyncKeyState(Keys::E as i32) as u32 & 0x8000) != 0 {
-            rotation = 1;
+        handle_state! {
+            [Keys::W, Keys::S, dp_forward, 1.];
+            [Keys::A, Keys::D, dp_sides, 1.];
+            [winuser::VK_SPACE, winuser::VK_CONTROL, dp_up, 1.];
+            [winuser::VK_F1, winuser::VK_F2, self.update_fov(0.01), self.update_fov(-0.01)];
+            [winuser::VK_PRIOR, winuser::VK_NEXT, speed_scale, 1];
+            [winuser::VK_F4, winuser::VK_F3, dir_speed, 1];
+            [Keys::E, Keys::Q, rotation, 1];
         }
 
         self.update_values(
