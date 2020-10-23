@@ -6,8 +6,8 @@ use std::rc::Rc;
 use std::thread;
 use std::time::{Duration, Instant};
 use winapi::shared::windef::POINT;
-use winapi::um::winuser::{GetAsyncKeyState, GetCursorPos, SetCursorPos};
 use winapi::um::winuser;
+use winapi::um::winuser::{GetAsyncKeyState, GetCursorPos, SetCursorPos};
 
 const INITIAL_POS: i32 = 500;
 

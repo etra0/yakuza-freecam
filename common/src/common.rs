@@ -1,12 +1,12 @@
 use memory_rs::process::process_wrapper::Process;
 use nalgebra_glm as glm;
-use winapi::um::winuser;
 use std::rc::Rc;
+use winapi::um::winuser;
 
 const CARGO_VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 const GIT_VERSION: Option<&'static str> = option_env!("GIT_VERSION");
 
-/// Generate current version of the executable from the 
+/// Generate current version of the executable from the
 /// latest git version and the cargo verison.
 pub fn get_version() -> String {
     let cargo = CARGO_VERSION.unwrap_or("Unknown");
@@ -28,7 +28,7 @@ pub enum Keys {
 
 /// Struct that contains an entry point relative to the executable,
 /// the original bytes (`f_orig`) and the bytes to be injected (`f_rep`)
-/// 
+///
 pub struct Injection {
     /// Entry point relative to the executable
     pub entry_point: usize,

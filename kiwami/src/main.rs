@@ -2,12 +2,12 @@ use common::common::{get_version, Camera, Injection};
 use memory_rs::process::process_wrapper::Process;
 use std::f32;
 use std::io::Error;
+use std::rc::Rc;
 use std::thread;
 use std::time::{Duration, Instant};
-use std::rc::Rc;
 use winapi::shared::windef::POINT;
-use winapi::um::winuser::{GetAsyncKeyState, GetCursorPos, SetCursorPos};
 use winapi::um::winuser;
+use winapi::um::winuser::{GetAsyncKeyState, GetCursorPos, SetCursorPos};
 
 const INITIAL_POS: i32 = 500;
 
