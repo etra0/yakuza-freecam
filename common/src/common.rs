@@ -1,6 +1,7 @@
 use memory_rs::process::process_wrapper::Process;
 use nalgebra_glm as glm;
 use winapi::um::winuser;
+use std::rc::Rc;
 
 const CARGO_VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 const GIT_VERSION: Option<&'static str> = option_env!("GIT_VERSION");
@@ -38,8 +39,8 @@ pub struct Injection {
 }
 
 /// Main struct that will handle the camera behaviour.
-pub struct Camera<'a> {
-    process: &'a Process,
+pub struct Camera {
+    process: Rc<Process>,
     /// Camera position in the lookAt version
     p_cam_x: f32,
     p_cam_y: f32,
@@ -68,8 +69,8 @@ pub struct Camera<'a> {
     pub injections: Vec<Injection>,
 }
 
-impl<'a> Camera<'a> {
-    pub fn new(process: &'a Process, data_base_addr: usize) -> Camera {
+impl Camera {
+    pub fn new(process: Rc<Process>, data_base_addr: usize) -> Camera {
         Camera {
             process,
             p_cam_x: 0f32,

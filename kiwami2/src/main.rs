@@ -4,6 +4,7 @@ use std::f32;
 use std::io::Error;
 use std::thread;
 use std::time::{Duration, Instant};
+use std::rc::Rc;
 use winapi::shared::windef::POINT;
 use winapi::um::winuser;
 use winapi::um::winuser::{GetAsyncKeyState, GetCursorPos, SetCursorPos};
@@ -71,7 +72,7 @@ pub fn main() -> Result<(), Error> {
     println!("Waiting for the game to start");
     let yakuza = loop {
         if let Ok(p) = Process::new("YakuzaKiwami2.exe") {
-            break p;
+            break Rc::new(p);
         };
 
         thread::sleep(Duration::from_secs(5));
@@ -108,7 +109,7 @@ pub fn main() -> Result<(), Error> {
         )
     };
 
-    let mut cam = Camera::new(&yakuza, p_shellcode);
+    let mut cam = Camera::new(yakuza.clone(), p_shellcode);
 
     // function that changes the focal length of the cinematics, when
     // active, nop this
