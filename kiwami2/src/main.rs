@@ -10,6 +10,7 @@ use winapi::um::winuser;
 use winapi::um::winuser::{GetAsyncKeyState, GetCursorPos, SetCursorPos};
 
 const INITIAL_POS: i32 = 500;
+static mut ORIGINAL_VAL_UI: [u32; 5] = [0; 5];
 
 extern "C" {
     static get_camera_data: u8;
@@ -21,6 +22,7 @@ extern "C" {
     static get_controller_input: u8;
     static get_controller_input_end: u8;
 }
+
 
 fn detect_activation_by_controller(value: u64) -> bool {
     let result = value & 0x11;
@@ -34,6 +36,27 @@ fn trigger_pause(process: &Process, addr: usize) {
     process.write_value::<u8>(addr, 0x1, true);
     thread::sleep(Duration::from_millis(100));
     process.write_value::<u8>(addr, 0x0, true);
+}
+
+fn remove_ui(process: &Process, activate: bool) {
+    let offsets: Vec<usize> = vec![0x291D1DC, 0x291D1D0, 0x291D1EC, 0x291D1E8, 0x291D1E4];
+
+    unsafe {
+    if ORIGINAL_VAL_UI[0] == 0 {
+        for (i, offset) in offsets.iter().enumerate() {
+            ORIGINAL_VAL_UI[i] = process.read_value::<u32>(*offset, false);
+        }
+    }
+
+    for (i, offset) in offsets.iter().enumerate() {
+        if activate {
+            process.write_value::<i32>(*offset, -1, false);
+        } else {
+            process.write_value::<u32>(*offset, ORIGINAL_VAL_UI[i], false);
+        }
+    }
+
+    }
 }
 
 pub fn main() -> Result<(), Error> {
@@ -147,6 +170,13 @@ pub fn main() -> Result<(), Error> {
         f_rep: vec![0xC6, 0x04, 0x0B, 0x00],
     });
 
+    // Nop UI coords writers
+    cam.injections.push(Injection {
+        entry_point: 0x1F0CB72,
+        f_orig: vec![0x89, 0x05, 0x64, 0x06, 0xA1, 0x00, 0x89, 0x0D, 0x52, 0x06, 0xA1, 0x00, 0x89, 0x05, 0x68, 0x06, 0xA1, 0x00, 0x89, 0x0D, 0x5E, 0x06, 0xA1, 0x00],
+        f_rep: vec![0x90; 24]
+    });
+
     let mut active = false;
     let mut capture_mouse = false;
 
@@ -242,8 +272,10 @@ pub fn main() -> Result<(), Error> {
 
                 if active {
                     cam.deattach();
+                    remove_ui(&yakuza, true);
                 } else {
                     cam.attach();
+                    remove_ui(&yakuza, false);
                 }
 
                 trigger_pause(&yakuza, c_v_a);
@@ -259,7 +291,9 @@ pub fn main() -> Result<(), Error> {
 
                 if active {
                     cam.deattach();
+                    remove_ui(&yakuza, true);
                 } else {
+                    remove_ui(&yakuza, false);
                     cam.attach();
                 }
 
@@ -274,8 +308,10 @@ pub fn main() -> Result<(), Error> {
                 println!("status of camera: {}", c_status);
 
                 if active {
+                    remove_ui(&yakuza, true);
                     cam.deattach();
                 } else {
+                    remove_ui(&yakuza, false);
                     cam.attach();
                 }
                 thread::sleep(Duration::from_millis(500));
