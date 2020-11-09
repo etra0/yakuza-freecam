@@ -23,7 +23,6 @@ extern "C" {
     static get_controller_input_end: u8;
 }
 
-
 fn detect_activation_by_controller(value: u64) -> bool {
     let result = value & 0x11;
     result == 0x11
@@ -42,20 +41,19 @@ fn remove_ui(process: &Process, activate: bool) {
     let offsets: Vec<usize> = vec![0x291D1DC, 0x291D1D0, 0x291D1EC, 0x291D1E8, 0x291D1E4];
 
     unsafe {
-    if ORIGINAL_VAL_UI[0] == 0 {
+        if ORIGINAL_VAL_UI[0] == 0 {
+            for (i, offset) in offsets.iter().enumerate() {
+                ORIGINAL_VAL_UI[i] = process.read_value::<u32>(*offset, false);
+            }
+        }
+
         for (i, offset) in offsets.iter().enumerate() {
-            ORIGINAL_VAL_UI[i] = process.read_value::<u32>(*offset, false);
+            if activate {
+                process.write_value::<i32>(*offset, -1, false);
+            } else {
+                process.write_value::<u32>(*offset, ORIGINAL_VAL_UI[i], false);
+            }
         }
-    }
-
-    for (i, offset) in offsets.iter().enumerate() {
-        if activate {
-            process.write_value::<i32>(*offset, -1, false);
-        } else {
-            process.write_value::<u32>(*offset, ORIGINAL_VAL_UI[i], false);
-        }
-    }
-
     }
 }
 
@@ -173,8 +171,11 @@ pub fn main() -> Result<(), Error> {
     // Nop UI coords writers
     cam.injections.push(Injection {
         entry_point: 0x1F0CB72,
-        f_orig: vec![0x89, 0x05, 0x64, 0x06, 0xA1, 0x00, 0x89, 0x0D, 0x52, 0x06, 0xA1, 0x00, 0x89, 0x05, 0x68, 0x06, 0xA1, 0x00, 0x89, 0x0D, 0x5E, 0x06, 0xA1, 0x00],
-        f_rep: vec![0x90; 24]
+        f_orig: vec![
+            0x89, 0x05, 0x64, 0x06, 0xA1, 0x00, 0x89, 0x0D, 0x52, 0x06, 0xA1, 0x00, 0x89, 0x05,
+            0x68, 0x06, 0xA1, 0x00, 0x89, 0x0D, 0x5E, 0x06, 0xA1, 0x00,
+        ],
+        f_rep: vec![0x90; 24],
     });
 
     let mut active = false;

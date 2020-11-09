@@ -23,7 +23,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: "Set current version"
-        run: echo "::set-env name=GIT_VERSION::$(git.exe rev-parse --short HEAD)"
+        run: echo "GIT_VERSION=$(git.exe rev-parse --short HEAD)" >> $env:GITHUB_ENV
 
       - name: "Build Yakuza 0"
         run: |
