@@ -1,10 +1,13 @@
 use memory_rs::process::process_wrapper::Process;
 use nalgebra_glm as glm;
+use std::rc::Rc;
 use winapi::um::winuser;
 
 const CARGO_VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 const GIT_VERSION: Option<&'static str> = option_env!("GIT_VERSION");
 
+/// Generate current version of the executable from the
+/// latest git version and the cargo verison.
 pub fn get_version() -> String {
     let cargo = CARGO_VERSION.unwrap_or("Unknown");
     let git = GIT_VERSION.unwrap_or("Unknown");
@@ -12,27 +15,44 @@ pub fn get_version() -> String {
     return format!("{}.{}", cargo, git);
 }
 
-// TODO: Fix this pub stuff
+/// Keys that aren't contained in the VirtualKeys from the Windows API.
+#[repr(i32)]
+pub enum Keys {
+    A = 0x41,
+    D = 0x44,
+    E = 0x45,
+    Q = 0x51,
+    S = 0x53,
+    W = 0x57,
+}
+
+/// Struct that contains an entry point relative to the executable,
+/// the original bytes (`f_orig`) and the bytes to be injected (`f_rep`)
+///
 pub struct Injection {
+    /// Entry point relative to the executable
     pub entry_point: usize,
-    // Original bytes
+    /// Original bytes
     pub f_orig: Vec<u8>,
-    // Representation to be replaced in case kind == CHANGE
+    /// Bytes to be injected
     pub f_rep: Vec<u8>,
 }
 
-pub struct Camera<'a> {
-    process: &'a Process,
-    // Camera position
+/// Main struct that will handle the camera behaviour.
+pub struct Camera {
+    process: Rc<Process>,
+    /// Camera position in the lookAt version
     p_cam_x: f32,
     p_cam_y: f32,
     p_cam_z: f32,
 
-    // Camera focus position
+    /// Camera foocus on a lookAt version
     f_cam_x: f32,
     f_cam_y: f32,
     f_cam_z: f32,
 
+    /// Position differentials to be added according to user input.
+    /// (Basically what will move the camera)
     dp_forward: f32,
     dp_sides: f32,
     dp_up: f32,
@@ -41,7 +61,7 @@ pub struct Camera<'a> {
     dir_speed_scale: f32,
     rotation: f32,
 
-    // base address for the data
+    /// Pointer where the injection was allocated.
     data_base_addr: usize,
 
     fov: f32,
@@ -49,8 +69,8 @@ pub struct Camera<'a> {
     pub injections: Vec<Injection>,
 }
 
-impl<'a> Camera<'a> {
-    pub fn new(process: &'a Process, data_base_addr: usize) -> Camera {
+impl Camera {
+    pub fn new(process: Rc<Process>, data_base_addr: usize) -> Camera {
         Camera {
             process,
             p_cam_x: 0f32,
@@ -71,6 +91,7 @@ impl<'a> Camera<'a> {
         }
     }
 
+    /// Calculates the new lookAt using spherical coordinates.
     fn calc_new_focus_point(
         cam_x: f32,
         cam_z: f32,
@@ -128,56 +149,34 @@ impl<'a> Camera<'a> {
         let mut dir_speed: i8 = 0;
         let mut rotation: i8 = 0;
 
-        if (winuser::GetAsyncKeyState(0x57) as u32 & 0x8000) != 0 {
-            dp_forward = 1.;
-        }
-        if (winuser::GetAsyncKeyState(0x53) as u32 & 0x8000) != 0 {
-            dp_forward = -1.;
+        /// Handle positive and negative state of keypressing
+        macro_rules! handle_state {
+            ([ $key_pos:expr, $key_neg:expr, $var:ident, $val:expr ]; $($tt:tt)*) => {
+                handle_state!([$key_pos, $key_neg, $var = $val, $var = - $val]; $($tt)*);
+            };
+
+            ([ $key_pos:expr, $key_neg:expr, $pos_do:expr, $neg_do:expr ]; $($tt:tt)*) => {
+                if (winuser::GetAsyncKeyState($key_pos as i32) as u32 & 0x8000) != 0 {
+                    $pos_do;
+                }
+
+                if (winuser::GetAsyncKeyState($key_neg as i32) as u32 & 0x8000) != 0 {
+                    $neg_do;
+                }
+                handle_state!($($tt)*);
+            };
+
+            () => {}
         }
 
-        if (winuser::GetAsyncKeyState(0x41) as u32 & 0x8000) != 0 {
-            dp_sides = 1.;
-        }
-        if (winuser::GetAsyncKeyState(0x44) as u32 & 0x8000) != 0 {
-            dp_sides = -1.;
-        }
-
-        if (winuser::GetAsyncKeyState(winuser::VK_SPACE) as u32 & 0x8000) != 0 {
-            dp_up = 1.;
-        }
-        if (winuser::GetAsyncKeyState(winuser::VK_CONTROL) as u32 & 0x8000) != 0 {
-            dp_up = -1.;
-        }
-
-        if (winuser::GetAsyncKeyState(winuser::VK_F1) as u32 & 0x8000) != 0 {
-            self.update_fov(0.01);
-        }
-        if (winuser::GetAsyncKeyState(winuser::VK_F2) as u32 & 0x8000) != 0 {
-            self.update_fov(-0.01)
-        }
-
-        if (winuser::GetAsyncKeyState(winuser::VK_PRIOR) as u32 & 0x8000) != 0 {
-            speed_scale = 1;
-        }
-
-        if (winuser::GetAsyncKeyState(winuser::VK_NEXT) as u32 & 0x8000) != 0 {
-            speed_scale = -1;
-        }
-
-        if (winuser::GetAsyncKeyState(winuser::VK_F3) as u32 & 0x8000) != 0 {
-            dir_speed = -1;
-        }
-
-        if (winuser::GetAsyncKeyState(winuser::VK_F4) as u32 & 0x8000) != 0 {
-            dir_speed = 1;
-        }
-
-        if (winuser::GetAsyncKeyState(0x51) as u32 & 0x8000) != 0 {
-            rotation = -1;
-        }
-
-        if (winuser::GetAsyncKeyState(0x45) as u32 & 0x8000) != 0 {
-            rotation = 1;
+        handle_state! {
+            [Keys::W, Keys::S, dp_forward, 1.];
+            [Keys::A, Keys::D, dp_sides, 1.];
+            [winuser::VK_SPACE, winuser::VK_CONTROL, dp_up, 1.];
+            [winuser::VK_F1, winuser::VK_F2, self.update_fov(0.01), self.update_fov(-0.01)];
+            [winuser::VK_PRIOR, winuser::VK_NEXT, speed_scale, 1];
+            [winuser::VK_F4, winuser::VK_F3, dir_speed, 1];
+            [Keys::E, Keys::Q, rotation, 1];
         }
 
         self.update_values(

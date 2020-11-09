@@ -2,6 +2,7 @@ use common::common::{get_version, Camera, Injection};
 use memory_rs::process::process_wrapper::Process;
 use std::f32;
 use std::io::Error;
+use std::rc::Rc;
 use std::thread;
 use std::time::{Duration, Instant};
 use winapi::shared::windef::POINT;
@@ -9,6 +10,7 @@ use winapi::um::winuser;
 use winapi::um::winuser::{GetAsyncKeyState, GetCursorPos, SetCursorPos};
 
 const INITIAL_POS: i32 = 500;
+static mut ORIGINAL_VAL_UI: [u32; 5] = [0; 5];
 
 extern "C" {
     static get_camera_data: u8;
@@ -33,6 +35,26 @@ fn trigger_pause(process: &Process, addr: usize) {
     process.write_value::<u8>(addr, 0x1, true);
     thread::sleep(Duration::from_millis(100));
     process.write_value::<u8>(addr, 0x0, true);
+}
+
+fn remove_ui(process: &Process, activate: bool) {
+    let offsets: Vec<usize> = vec![0x291D1DC, 0x291D1D0, 0x291D1EC, 0x291D1E8, 0x291D1E4];
+
+    unsafe {
+        if ORIGINAL_VAL_UI[0] == 0 {
+            for (i, offset) in offsets.iter().enumerate() {
+                ORIGINAL_VAL_UI[i] = process.read_value::<u32>(*offset, false);
+            }
+        }
+
+        for (i, offset) in offsets.iter().enumerate() {
+            if activate {
+                process.write_value::<i32>(*offset, -1, false);
+            } else {
+                process.write_value::<u32>(*offset, ORIGINAL_VAL_UI[i], false);
+            }
+        }
+    }
 }
 
 pub fn main() -> Result<(), Error> {
@@ -71,7 +93,7 @@ pub fn main() -> Result<(), Error> {
     println!("Waiting for the game to start");
     let yakuza = loop {
         if let Ok(p) = Process::new("YakuzaKiwami2.exe") {
-            break p;
+            break Rc::new(p);
         };
 
         thread::sleep(Duration::from_secs(5));
@@ -108,7 +130,7 @@ pub fn main() -> Result<(), Error> {
         )
     };
 
-    let mut cam = Camera::new(&yakuza, p_shellcode);
+    let mut cam = Camera::new(yakuza.clone(), p_shellcode);
 
     // function that changes the focal length of the cinematics, when
     // active, nop this
@@ -144,6 +166,16 @@ pub fn main() -> Result<(), Error> {
         entry_point: 0x1B71453,
         f_orig: vec![0xC6, 0x04, 0x0B, 0x01],
         f_rep: vec![0xC6, 0x04, 0x0B, 0x00],
+    });
+
+    // Nop UI coords writers
+    cam.injections.push(Injection {
+        entry_point: 0x1F0CB72,
+        f_orig: vec![
+            0x89, 0x05, 0x64, 0x06, 0xA1, 0x00, 0x89, 0x0D, 0x52, 0x06, 0xA1, 0x00, 0x89, 0x05,
+            0x68, 0x06, 0xA1, 0x00, 0x89, 0x0D, 0x5E, 0x06, 0xA1, 0x00,
+        ],
+        f_rep: vec![0x90; 24],
     });
 
     let mut active = false;
@@ -241,8 +273,10 @@ pub fn main() -> Result<(), Error> {
 
                 if active {
                     cam.deattach();
+                    remove_ui(&yakuza, true);
                 } else {
                     cam.attach();
+                    remove_ui(&yakuza, false);
                 }
 
                 trigger_pause(&yakuza, c_v_a);
@@ -258,7 +292,9 @@ pub fn main() -> Result<(), Error> {
 
                 if active {
                     cam.deattach();
+                    remove_ui(&yakuza, true);
                 } else {
+                    remove_ui(&yakuza, false);
                     cam.attach();
                 }
 
@@ -273,8 +309,10 @@ pub fn main() -> Result<(), Error> {
                 println!("status of camera: {}", c_status);
 
                 if active {
+                    remove_ui(&yakuza, true);
                     cam.deattach();
                 } else {
+                    remove_ui(&yakuza, false);
                     cam.attach();
                 }
                 thread::sleep(Duration::from_millis(500));

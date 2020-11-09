@@ -56,7 +56,7 @@ dependencies = [
 
 [[package]]
 name = "common"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "cc",
  "memory-rs",
@@ -82,7 +82,7 @@ dependencies = [
 
 [[package]]
 name = "kiwami"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "cc",
  "common",
@@ -93,7 +93,7 @@ dependencies = [
 
 [[package]]
 name = "kiwami2"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "cc",
  "common",
@@ -353,7 +353,7 @@ dependencies = [
 
 [[package]]
 name = "yakuza0"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "cc",
  "common",

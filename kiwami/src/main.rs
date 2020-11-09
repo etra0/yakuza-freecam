@@ -2,6 +2,7 @@ use common::common::{get_version, Camera, Injection};
 use memory_rs::process::process_wrapper::Process;
 use std::f32;
 use std::io::Error;
+use std::rc::Rc;
 use std::thread;
 use std::time::{Duration, Instant};
 use winapi::shared::windef::POINT;
@@ -55,7 +56,7 @@ pub fn main() -> Result<(), Error> {
     println!("Waiting for the game to start");
     let yakuza = loop {
         if let Ok(p) = Process::new("YakuzaKiwami.exe") {
-            break p;
+            break Rc::new(p);
         };
 
         thread::sleep(Duration::from_secs(5));
@@ -82,7 +83,7 @@ pub fn main() -> Result<(), Error> {
         )
     };
 
-    let mut cam = Camera::new(&yakuza, p_shellcode);
+    let mut cam = Camera::new(yakuza.clone(), p_shellcode);
 
     // function that changes the focal length of the cinematics, when
     // active, nop this
