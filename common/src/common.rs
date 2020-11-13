@@ -1,4 +1,4 @@
-use memory_rs::process::process_wrapper::Process;
+use memory_rs::external::process::Process;
 use nalgebra_glm as glm;
 use std::rc::Rc;
 use winapi::um::winuser;
