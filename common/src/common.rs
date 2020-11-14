@@ -92,7 +92,7 @@ impl Camera {
     }
 
     /// Calculates the new lookAt using spherical coordinates.
-    fn calc_new_focus_point(
+    pub fn calc_new_focus_point(
         cam_x: f32,
         cam_z: f32,
         cam_y: f32,
