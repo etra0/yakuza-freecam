@@ -1,0 +1,29 @@
+[package]
+name = "likeadragon"
+version = "0.1.0"
+authors = ["Sebastián Aedo <sebastian.aedo@sansano.usm.cl>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+common = { path = "../common" }
+memory-rs = { git = "https://github.com/etra0/memory-rs"}
+winapi = { version = "0.3.8", features = ["winuser", "xinput"] }
+slog = { version = "2.5", features = ["max_level_trace", "release_max_level_warn"] }
+slog-term = { version = "2.5" }
+slog-async = { version = "2.5" }
+slog-stdlog = { version = "4.1" }
+slog-scope = { version = "4.3" }
+log = { version = "0.4.11" }
+nalgebra-glm = "0.3"
+
+[build-dependencies]
+winres = "0.1"
+cc = "1.0"
+
+# [build-dependencies]
+# winres = "0.1"
+# cc = "1.0"
+[lib]
+crate-type = ["cdylib"]
