@@ -2,6 +2,8 @@ use memory_rs::external::process::Process;
 use nalgebra_glm as glm;
 use std::rc::Rc;
 use winapi::um::winuser;
+use winapi;
+use std::ffi::CString;
 
 const CARGO_VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 const GIT_VERSION: Option<&'static str> = option_env!("GIT_VERSION");
@@ -332,5 +334,19 @@ impl Camera {
             self.process
                 .write_aob(injection.entry_point, &injection.f_orig, false);
         }
+    }
+}
+
+pub fn error_message(message: &str) {
+    let title = CString::new("Error while patching").unwrap();
+    let message = CString::new(message).unwrap();
+
+    unsafe {
+        winapi::um::winuser::MessageBoxA(
+            std::ptr::null_mut(),
+            message.as_ptr(),
+            title.as_ptr(),
+            0x10,
+        );
     }
 }

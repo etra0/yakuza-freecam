@@ -7,7 +7,7 @@ use winapi;
 use winapi::shared::minwindef::LPVOID;
 use winapi::um::xinput;
 use nalgebra_glm as glm;
-use common::common::Camera;
+use common::external::{Camera, error_message};
 
 use log::{error, info};
 use slog;
@@ -25,19 +25,6 @@ extern "C" {
 #[no_mangle]
 pub static mut _camera_struct: usize = 0;
 
-fn error_message(message: &str) {
-    let title = CString::new("Error while patching").unwrap();
-    let message = CString::new(message).unwrap();
-
-    unsafe {
-        winapi::um::winuser::MessageBoxA(
-            std::ptr::null_mut(),
-            message.as_ptr(),
-            title.as_ptr(),
-            0x10,
-        );
-    }
-}
 
 pub unsafe extern "system" fn wrapper(lib: LPVOID) -> u32 {
     // Logging initialization
