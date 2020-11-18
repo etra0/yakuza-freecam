@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 common = { path = "../common" }
-memory-rs = { git = "https://github.com/etra0/memory-rs"}
+memory-rs = { path = "../../memory-rs"}
 winapi = { version = "0.3.8", features = ["winuser", "xinput"] }
 slog = { version = "2.5", features = ["max_level_trace", "release_max_level_warn"] }
 slog-term = { version = "2.5" }
