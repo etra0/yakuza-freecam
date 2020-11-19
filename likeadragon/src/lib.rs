@@ -1,9 +1,10 @@
 pub mod globals;
 
 use common::external::{Camera, error_message};
+use crate::globals::*;
 use memory_rs::internal::memory::Detour;
-use memory_rs::{try_winapi, generate_aob_pattern};
 use memory_rs::internal::process_info::ProcessInfo;
+use memory_rs::{try_winapi, generate_aob_pattern};
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 use winapi::shared::minwindef::LPVOID;
@@ -11,13 +12,12 @@ use winapi::um::xinput;
 use winapi;
 
 use log::{error, info};
-use slog;
-use slog::o;
 use slog::Drain;
+use slog::o;
+use slog;
 use slog_scope;
 use slog_stdlog;
 use slog_term;
-use crate::globals::*;
 
 // TODO: remove this
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
@@ -90,6 +90,8 @@ fn make_injections(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
         let camera_func = Detour::new_from_aob(pat, proc_inf,
             auto_cast!(get_camera_data), Some(&mut _get_camera_data), 15,
             Some(-0x33))?;
+
+        info!("camera_func found: {:x}", camera_func.entry_point);
         detours.push(camera_func);
 
         let pat = generate_aob_pattern![0xC5, 0x7A, 0x11, 0x05, 0xC2, 0x32,
@@ -97,6 +99,7 @@ fn make_injections(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
         let timestop_func = Detour::new_from_aob(pat, proc_inf,
             auto_cast!(get_timestop), Some(&mut _get_timestop), 16, None)?;
 
+        info!("timestop_func found: {:x}", timestop_func.entry_point);
         detours.push(timestop_func);
     }
 
@@ -107,20 +110,30 @@ fn make_injections(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
 // Asume safety of XInputGameState
 fn xinput_get_state(xinput_state: &mut xinput::XINPUT_STATE) -> Result<()> {
     use xinput::XInputGetState;
-    unsafe {
-        XInputGetState(0, xinput_state);
-    }
+    let wrapper = |xs| -> u32 {
+        let res = unsafe { XInputGetState(0, xs) };
+        if res == 0 {
+            return 1
+        }
+        return 0
+    };
+
+    try_winapi!(
+        wrapper(xinput_state)
+    );
 
     Ok(())
 }
 
-struct Inputs {
-    current_speed: f32,
+struct Input {
+    engine_speed: f32,
     // Deltas with X and Y
     delta_pos: (f32, f32),
     delta_focus: (f32, f32),
 
     delta_altitude: f32,
+
+    change_active: bool,
 }
 
 fn patch(_: LPVOID) -> Result<()> {
@@ -137,7 +150,10 @@ fn patch(_: LPVOID) -> Result<()> {
     let mut active = false;
     let mut current_speed = 1_f32;
 
+    let mut original_ui: Option<Vec<u32>> = None;
+    let ui_ = unsafe { std::slice::from_raw_parts_mut((proc_inf.addr + 0x2829C88) as *mut u32, 2) };
     info!("Starting main loop");
+
     loop {
         xinput_get_state(&mut xs)?;
         let gp = xs.Gamepad;
@@ -148,10 +164,14 @@ fn patch(_: LPVOID) -> Result<()> {
             unsafe {
                 _camera_active = active as u8;
             }
+            current_speed = 1.;
             if !active {
+                if original_ui.is_some() {
+                    (*ui_).copy_from_slice(&original_ui.unwrap());
+                    original_ui = None;
+                }
                 unsafe {
                     _camera_struct = 0;
-                    current_speed = 1.;
                 }
             }
 
@@ -160,8 +180,8 @@ fn patch(_: LPVOID) -> Result<()> {
 
         if (gp.wButtons & 0x100) == 0x100 {
             current_speed -= 0.01;
-            if current_speed < 1e-2 {
-                current_speed = 1e-2;
+            if current_speed < 1e-4 {
+                current_speed = 1e-4;
             }
         }
 
@@ -179,7 +199,7 @@ fn patch(_: LPVOID) -> Result<()> {
 
         unsafe {
             if _camera_struct == 0x0 {
-                println!("Camera struct is zero");
+                // println!("Camera struct is zero");
                 continue;
             }
         }
@@ -194,10 +214,15 @@ fn patch(_: LPVOID) -> Result<()> {
             std::ptr::copy_nonoverlapping(rot.as_ptr(), (*gc).rot.as_mut_ptr(),
                 3);
         }
-
+        if original_ui.is_none() {
+            let mut t = vec![];
+            t.extend_from_slice(ui_);
+            original_ui = Some(t);
+        }
 
         unsafe {
         _engine_speed = current_speed;
+        (*ui_).copy_from_slice(&[0, 0]);
         }
         let r_cam_x = unsafe { (*gc).focus[0] - (*gc).pos[0] };
         let r_cam_y = unsafe { (*gc).focus[1] - (*gc).pos[1] };
