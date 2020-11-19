@@ -136,6 +136,66 @@ struct Input {
     change_active: bool,
 }
 
+trait Inject {
+    fn inject(&mut self);
+    fn remove_injection(&mut self);
+}
+
+// UIElements of the game. original_value will be copied when the
+// struct gets initializated. The value will be deleted again when
+// you do a remove_injection
+struct UIElement {
+    addr: usize,
+    original_value: Option<u32>
+}
+
+
+impl UIElement {
+    pub fn new(addr: usize) -> UIElement {
+        let original_value = unsafe { Some(*(addr as *mut u32)) };
+
+        UIElement { addr, original_value }
+    }
+
+}
+
+impl Inject for UIElement {
+    fn inject(&mut self) {
+        unsafe {
+            let ptr = self.addr as *mut u32;
+            if self.original_value.is_none() {
+                self.original_value = Some(*ptr);
+            }
+            *ptr = 0;
+        }
+    }
+
+    fn remove_injection(&mut self) {
+        if self.original_value.is_none() {
+            return;
+        }
+        unsafe {
+            let ptr = self.addr as *mut u32;
+            *ptr = self.original_value.unwrap();
+        }
+
+        self.original_value = None;
+    }
+}
+
+impl<T> Inject for Vec<T> where T: Inject {
+    fn inject(&mut self) {
+        self
+            .iter_mut()
+            .for_each(|x| (*x).inject());
+    }
+    fn remove_injection(&mut self) {
+        self
+            .iter_mut()
+            .for_each(|x| (*x).remove_injection());
+    }
+}
+
 fn patch(_: LPVOID) -> Result<()> {
     unsafe {
         use winapi::um::consoleapi::AllocConsole;
@@ -151,7 +211,12 @@ fn patch(_: LPVOID) -> Result<()> {
     let mut current_speed = 1_f32;
 
     let mut original_ui: Option<Vec<u32>> = None;
-    let ui_ = unsafe { std::slice::from_raw_parts_mut((proc_inf.addr + 0x2829C88) as *mut u32, 2) };
+    let mut ui_elements: Vec<UIElement> = vec![
+        UIElement::new(proc_inf.addr + 0x2829C88),
+        UIElement::new(proc_inf.addr + 0x2829C8C),
+        UIElement::new(proc_inf.addr + 0x2829CAC),
+    ];
+
     info!("Starting main loop");
 
     loop {
@@ -164,12 +229,9 @@ fn patch(_: LPVOID) -> Result<()> {
             unsafe {
                 _camera_active = active as u8;
             }
-            current_speed = 1.;
+            current_speed = 1e-4;
             if !active {
-                if original_ui.is_some() {
-                    (*ui_).copy_from_slice(&original_ui.unwrap());
-                    original_ui = None;
-                }
+                ui_elements.remove_injection();
                 unsafe {
                     _camera_struct = 0;
                 }
@@ -214,15 +276,10 @@ fn patch(_: LPVOID) -> Result<()> {
             std::ptr::copy_nonoverlapping(rot.as_ptr(), (*gc).rot.as_mut_ptr(),
                 3);
         }
-        if original_ui.is_none() {
-            let mut t = vec![];
-            t.extend_from_slice(ui_);
-            original_ui = Some(t);
-        }
 
         unsafe {
         _engine_speed = current_speed;
-        (*ui_).copy_from_slice(&[0, 0]);
+        ui_elements.inject();
         }
         let r_cam_x = unsafe { (*gc).focus[0] - (*gc).pos[0] };
         let r_cam_y = unsafe { (*gc).focus[1] - (*gc).pos[1] };
@@ -260,7 +317,7 @@ fn patch(_: LPVOID) -> Result<()> {
     println!("Dropping values");
     detours.clear();
 
-    std::thread::sleep(std::time::Duration::from_secs(5));
+    std::thread::sleep(std::time::Duration::from_secs(2));
 
     info!("Freeing console");
     unsafe {
