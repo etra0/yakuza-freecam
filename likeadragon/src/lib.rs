@@ -1,11 +1,9 @@
 pub mod globals;
 
 use common::external::{Camera, error_message};
-use common::internal::Injection;
+use memory_rs::internal::memory::Detour;
 use memory_rs::{try_winapi, generate_aob_pattern};
-use memory_rs::internal::memory::{hook_function, scan_aob, write_aob};
 use memory_rs::internal::process_info::ProcessInfo;
-use nalgebra_glm as glm;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 use winapi::shared::minwindef::LPVOID;
@@ -23,11 +21,6 @@ use crate::globals::*;
 
 // TODO: remove this
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-
-extern "C" {
-    static get_camera_data: u8;
-    static get_timestop: u8;
-}
 
 #[repr(C)]
 #[derive(Debug)]
@@ -63,7 +56,7 @@ pub unsafe extern "system" fn wrapper(lib: LPVOID) -> u32 {
             Err(e) => {
                 let msg = format!("{}", e);
                 error!("Error: {}", msg);
-                unsafe {
+                {
                     use winapi::um::wincon::FreeConsole;
                     (FreeConsole());
                 }
@@ -82,72 +75,72 @@ pub unsafe extern "system" fn wrapper(lib: LPVOID) -> u32 {
     0
 }
 
-macro_rules! scan_aob_process {
-    ($proc:expr, $fail:expr, [$($tt:tt),*]) => {{
-        let (size, func) = generate_aob_pattern![
-            $($tt),*
-        ];
-        scan_aob($proc.addr, $proc.size, func, size)?.ok_or($fail)?
-    }}
-}
-
-
-fn patch(lib: LPVOID) -> Result<()> {
-    unsafe {
-        use winapi::um::consoleapi::AllocConsole;
-        try_winapi!(AllocConsole());
-    }
-
-    let proc_inf = ProcessInfo::new("YakuzaLikeADragon.exe")?;
-    let mut injections: Vec<Injection> = Vec::new();
-
-    let camera_func: usize = scan_aob_process!(proc_inf, "Couldn't find camera",
-        [0x90, 0xC5, 0xF8, 0x10, 0x07, 0xC5, 0xF8, 0x11, 0x86, 0x80, 0x00,
-        0x00, 0x00]) - 0x33;
-    info!("Camera_func found: {:x}", camera_func);
-
-    let timestop_func: usize = scan_aob_process!(proc_inf, "Couldn't find timestop",
-        [0xC5, 0x7A, 0x11, 0x05, 0xC2, 0x32, 0xF8, 0x01, 0xC5, 0xFA, 0x11,
-        0x35, 0xBE, 0x32, 0xF8, 0x01]);
-
-    let original_bytes = vec![
-        0x40, 0x57, 0x48, 0x83, 0xEC, 0x40, 0x48, 0xC7, 0x44, 0x24, 0x20, 0xFE,
-        0xFF, 0xFF, 0xFF
-    ];
-
-    let timestop_bytes = vec![
-        0xC5, 0x7A, 0x11, 0x05, 0xC2, 0x32, 0xF8, 0x01, 0xC5, 0xFA, 0x11, 0x35,
-        0xBE, 0x32, 0xF8, 0x01
-    ];
-
+fn make_injections(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
     macro_rules! auto_cast {
         ($val:expr) => {
             &$val as *const u8 as usize
         };
     };
 
-    info!("Injecting camera_func");
-    unsafe {
-        hook_function(camera_func, auto_cast!(get_camera_data),
-            Some(&mut _get_camera_data), 15)?;
+    let mut detours = vec![];
 
-        hook_function(timestop_func, auto_cast!(get_timestop),
-            Some(&mut _get_timestop), 16)?;
+    unsafe {
+        let pat = generate_aob_pattern![0x90, 0xC5, 0xF8, 0x10, 0x07, 0xC5,
+            0xF8, 0x11, 0x86, 0x80, 0x00, 0x00, 0x00];
+        let camera_func = Detour::new_from_aob(pat, proc_inf,
+            auto_cast!(get_camera_data), Some(&mut _get_camera_data), 15,
+            Some(-0x33))?;
+        detours.push(camera_func);
+
+        let pat = generate_aob_pattern![0xC5, 0x7A, 0x11, 0x05, 0xC2, 0x32,
+            0xF8, 0x01, 0xC5, 0xFA, 0x11, 0x35, 0xBE, 0x32, 0xF8, 0x01];
+        let timestop_func = Detour::new_from_aob(pat, proc_inf,
+            auto_cast!(get_timestop), Some(&mut _get_timestop), 16, None)?;
+
+        detours.push(timestop_func);
     }
 
     info!("Injection completed succesfully");
-    let mut xinput_state: xinput::XINPUT_STATE = unsafe { std::mem::zeroed() };
+    Ok(detours)
+}
 
-    let mut active = true;
-    info!("Starting main loop");
+// Asume safety of XInputGameState
+fn xinput_get_state(xinput_state: &mut xinput::XINPUT_STATE) -> Result<()> {
+    use xinput::XInputGetState;
+    unsafe {
+        XInputGetState(0, xinput_state);
+    }
+
+    Ok(())
+}
+
+struct Inputs {
+    current_speed: f32,
+    // Deltas with X and Y
+    delta_pos: (f32, f32),
+    delta_focus: (f32, f32),
+
+    delta_altitude: f32,
+}
+
+fn patch(_: LPVOID) -> Result<()> {
+    unsafe {
+        use winapi::um::consoleapi::AllocConsole;
+        try_winapi!(AllocConsole());
+    }
+
+    let proc_inf = ProcessInfo::new("YakuzaLikeADragon.exe")?;
+    let mut detours = make_injections(&proc_inf)?;
+
+    let mut xs: xinput::XINPUT_STATE = unsafe { std::mem::zeroed() };
+
+    let mut active = false;
     let mut current_speed = 1_f32;
-    let mut first_gc = 0_usize;
 
+    info!("Starting main loop");
     loop {
-        unsafe {
-            xinput::XInputGetState(0, &mut xinput_state);
-        }
-        let gp = xinput_state.Gamepad;
+        xinput_get_state(&mut xs)?;
+        let gp = xs.Gamepad;
 
         if (gp.wButtons & (0x40 | 0x80)) == (0x40 | 0x80) {
             active = !active;
@@ -196,12 +189,6 @@ fn patch(lib: LPVOID) -> Result<()> {
         }
 
         let gc = unsafe { (_camera_struct + 0x80) as *mut GameCamera };
-        unsafe {
-        if first_gc != (_camera_struct + 0x80) {
-            first_gc = _camera_struct + 0x80;
-            println!("{:x}", first_gc);
-        }
-        }
         let rot = [0., 1., 0.];
         unsafe {
             std::ptr::copy_nonoverlapping(rot.as_ptr(), (*gc).rot.as_mut_ptr(),
@@ -241,17 +228,14 @@ fn patch(lib: LPVOID) -> Result<()> {
         }
 
         std::thread::sleep(std::time::Duration::from_millis(10));
-
-
     }
 
     std::io::stdout().flush()?;
 
-    info!("Writing original bytes");
-    unsafe {
-        write_aob(camera_func, &original_bytes)?;
-        write_aob(timestop_func, &timestop_bytes)?;
-    }
+    println!("Dropping values");
+    detours.clear();
+
+    std::thread::sleep(std::time::Duration::from_secs(5));
 
     info!("Freeing console");
     unsafe {

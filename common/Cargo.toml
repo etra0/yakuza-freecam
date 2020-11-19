@@ -5,7 +5,7 @@ authors = ["Sebastian"]
 edition = "2018"
 
 [dependencies]
-memory-rs = { git = "https://github.com/etra0/memory-rs"}
+memory-rs = { path = "../../memory-rs" }
 winapi = { version = "0.3.8", features = ["winuser", "impl-default"] }
 nalgebra-glm = "0.3"
 

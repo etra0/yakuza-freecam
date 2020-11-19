@@ -130,7 +130,7 @@ name = "common"
 version = "1.0.0"
 dependencies = [
  "cc",
- "memory-rs 0.1.2",
+ "memory-rs 0.1.3",
  "nalgebra-glm",
  "winapi",
  "winres",

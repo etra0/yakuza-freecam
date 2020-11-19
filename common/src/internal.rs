@@ -1,4 +1,5 @@
-use memory_rs::internal::memory::write_aob;
+use memory_rs::internal::memory::{write_aob, scan_aob, hook_function};
+use memory_rs::internal::process_info::ProcessInfo;
 /// Struct that contains an entry point relative to the executable,
 /// the original bytes (`f_orig`) and the bytes to be injected (`f_rep`)
 ///
@@ -10,6 +11,7 @@ pub struct Injection {
     /// Bytes to be injected
     pub f_rep: Vec<u8>,
 }
+
 
 impl Injection {
     pub fn new(entry_point: usize, f_rep: Vec<u8>) -> Injection {
@@ -39,3 +41,4 @@ impl Injection {
         Ok(())
     }
 }
+
