@@ -1,8 +1,8 @@
 pub mod globals;
 
 use common::external::{Camera, error_message, success_message};
+use memory_rs::internal::injections::*;
 use crate::globals::*;
-use memory_rs::internal::memory::Detour;
 use memory_rs::internal::process_info::ProcessInfo;
 use memory_rs::{try_winapi, generate_aob_pattern};
 use std::fs::OpenOptions;
@@ -23,11 +23,25 @@ use slog_term;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[repr(C)]
-#[derive(Debug)]
 struct GameCamera {
     pos: [f32; 4],
     focus: [f32; 4],
     rot: [f32; 4],
+    padding_: [f32; 0x8],
+    fov: f32
+}
+
+impl std::fmt::Debug for GameCamera {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let ptr = self as *const GameCamera as usize;
+        f.debug_struct("GameCamera")
+            .field("self", &format_args!("{:x}", ptr))
+            .field("pos", &self.pos)
+            .field("focus", &self.focus)
+            .field("rot", &self.rot)
+            .field("fov", &self.fov)
+            .finish()
+    }
 }
 
 pub unsafe extern "system" fn wrapper(lib: LPVOID) -> u32 {
@@ -75,7 +89,7 @@ pub unsafe extern "system" fn wrapper(lib: LPVOID) -> u32 {
     0
 }
 
-fn make_injections(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
+fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
     macro_rules! auto_cast {
         ($val:expr) => {
             &$val as *const u8 as usize
@@ -107,106 +121,74 @@ fn make_injections(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
     Ok(detours)
 }
 
+fn make_injections(proc_inf: &ProcessInfo) -> Result<Vec<Injection>> {
+    let mut v = vec![];
+
+    let fov = Injection::new_from_aob(proc_inf, vec![0x90; 6],
+        generate_aob_pattern![
+            0x89, 0x86, 0xD0, 0x00, 0x00, 0x00, 0x8B, 0x47,
+            0x54, 0x89, 0x86, 0xD4, 0x00, 0x00, 0x00
+    ])?;
+
+    v.push(fov);
+    Ok(v)
+}
+
 // Asume safety of XInputGameState
 fn xinput_get_state(xinput_state: &mut xinput::XINPUT_STATE) -> Result<()> {
     use xinput::XInputGetState;
-    let wrapper = |xs| -> u32 {
+    let xinput_wrapper = |xs: &mut xinput::XINPUT_STATE| -> u32 {
         let res = unsafe { XInputGetState(0, xs) };
         if res == 0 {
-            return 1
+            return 1;
         }
-        return 0
+        error_message(&format!("Xinput failed: {}", res));
+        return 0;
     };
 
     try_winapi!(
-        wrapper(xinput_state)
+        xinput_wrapper(xinput_state)
     );
 
     Ok(())
 }
 
-struct Input {
-    engine_speed: f32,
+pub struct Input {
+    pub engine_speed: f32,
     // Deltas with X and Y
-    delta_pos: (f32, f32),
-    delta_focus: (f32, f32),
+    pub delta_pos: (f32, f32),
+    pub delta_focus: (f32, f32),
 
-    delta_altitude: f32,
+    pub delta_altitude: f32,
 
-    change_active: bool,
+    pub change_active: bool,
 }
 
-trait Inject {
-    fn inject(&mut self);
-    fn remove_injection(&mut self);
-}
-
-// UIElements of the game. original_value will be copied when the
-// struct gets initializated. The value will be deleted again when
-// you do a remove_injection
-struct UIElement {
-    addr: usize,
-    original_value: Option<u32>
-}
-
-
-impl UIElement {
-    pub fn new(addr: usize) -> UIElement {
-        let original_value = unsafe { Some(*(addr as *mut u32)) };
-
-        UIElement { addr, original_value }
-    }
-
-}
-
-impl Inject for UIElement {
-    fn inject(&mut self) {
-        unsafe {
-            let ptr = self.addr as *mut u32;
-            if self.original_value.is_none() {
-                self.original_value = Some(*ptr);
-            }
-            *ptr = 0;
+impl Input {
+    pub fn new() -> Input {
+        Input {
+            engine_speed: 1.,
+            delta_pos: (0., 0.),
+            delta_focus: (0., 0.),
+            delta_altitude: 0.,
+            change_active: false
         }
     }
-
-    fn remove_injection(&mut self) {
-        if self.original_value.is_none() {
-            return;
-        }
-        unsafe {
-            let ptr = self.addr as *mut u32;
-            *ptr = self.original_value.unwrap();
-        }
-
-        self.original_value = None;
-    }
 }
 
-impl<T> Inject for Vec<T> where T: Inject {
-    fn inject(&mut self) {
-        self
-            .iter_mut()
-            .for_each(|x| (*x).inject());
-    }
-    fn remove_injection(&mut self) {
-        self
-            .iter_mut()
-            .for_each(|x| (*x).remove_injection());
-    }
-}
+
 
 #[cfg(not(feature = "ms_store"))]
-fn nope_ui_elements(proc_inf: &ProcessInfo) -> Vec<UIElement> {
+fn nope_ui_elements(proc_inf: &ProcessInfo) -> Vec<StaticElement> {
     vec![
-            UIElement::new(proc_inf.addr + 0x2829C88),
-            UIElement::new(proc_inf.addr + 0x2829C8C),
-            UIElement::new(proc_inf.addr + 0x2829CAC),
+            StaticElement::new(proc_inf.addr + 0x2829C88),
+            StaticElement::new(proc_inf.addr + 0x2829C8C),
+            StaticElement::new(proc_inf.addr + 0x2829CAC),
         ]
 }
 
 #[cfg(feature = "ms_store")]
-fn nope_ui_elements(proc_inf: &ProcessInfo) -> Vec<UIElement> {
+fn nope_ui_elements(proc_inf: &ProcessInfo) -> Vec<StaticElement> {
     vec![]
 }
 
@@ -222,14 +204,16 @@ fn patch(_: LPVOID) -> Result<()> {
     }
 
     let proc_inf = ProcessInfo::new("YakuzaLikeADragon.exe")?;
-    let mut detours = make_injections(&proc_inf)?;
+    let mut detours = inject_detourings(&proc_inf)?;
 
     let mut xs: xinput::XINPUT_STATE = unsafe { std::mem::zeroed() };
 
     let mut active = false;
     let mut current_speed = 1_f32;
 
-    let mut ui_elements: Vec<UIElement> = nope_ui_elements(&proc_inf);
+    let mut ui_elements: Vec<StaticElement> = nope_ui_elements(&proc_inf);
+    let mut injections = make_injections(&proc_inf)?;
+    let mut fov = 1.;
 
     info!("Starting main loop");
 
@@ -240,15 +224,19 @@ fn patch(_: LPVOID) -> Result<()> {
         if (gp.wButtons & (0x200 | 0x80)) == (0x200 | 0x80) {
             active = !active;
             println!("Camera is {}", active);
+
             unsafe {
                 _camera_active = active as u8;
             }
             current_speed = 1e-4;
-            if !active {
+            if active {
+                injections.inject();
+            } else {
                 ui_elements.remove_injection();
                 unsafe {
                     _camera_struct = 0;
                 }
+                injections.remove_injection();
             }
 
             std::thread::sleep(std::time::Duration::from_millis(500));
@@ -265,6 +253,20 @@ fn patch(_: LPVOID) -> Result<()> {
             current_speed += 0.01;
         }
 
+        if (gp.bLeftTrigger > 150) {
+            fov -= 0.01;
+            if fov < 1e-3 {
+                fov = 0.01
+            }
+        }
+
+        if (gp.bRightTrigger > 150) {
+            fov += 0.01;
+            if fov > 3.12 {
+                fov = 3.12;
+            }
+        }
+
         #[cfg(debug_assertions)]
         if (gp.wButtons & (0x1000 | 0x4000)) == (0x1000 | 0x4000) {
             info!("Exiting main loop");
@@ -276,7 +278,6 @@ fn patch(_: LPVOID) -> Result<()> {
 
         unsafe {
             if _camera_struct == 0x0 {
-                // println!("Camera struct is zero");
                 continue;
             }
         }
@@ -293,8 +294,8 @@ fn patch(_: LPVOID) -> Result<()> {
         }
 
         unsafe {
-        _engine_speed = current_speed;
-        ui_elements.inject();
+            _engine_speed = current_speed;
+            ui_elements.inject();
         }
         let r_cam_x = unsafe { (*gc).focus[0] - (*gc).pos[0] };
         let r_cam_y = unsafe { (*gc).focus[1] - (*gc).pos[1] };
@@ -322,6 +323,7 @@ fn patch(_: LPVOID) -> Result<()> {
             (*gc).focus[2] = (*gc).pos[2] + r_cam_z;
 
             println!("{:?} ; {:x}, {}", (*gc), gp.wButtons, current_speed);
+            (*gc).fov = fov;
         }
 
         std::thread::sleep(std::time::Duration::from_millis(10));
