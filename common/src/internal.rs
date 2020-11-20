@@ -1,5 +1,4 @@
-use memory_rs::internal::memory::{write_aob, scan_aob, hook_function};
-use memory_rs::internal::process_info::ProcessInfo;
+use memory_rs::internal::memory::{write_aob};
 /// Struct that contains an entry point relative to the executable,
 /// the original bytes (`f_orig`) and the bytes to be injected (`f_rep`)
 ///

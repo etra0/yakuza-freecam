@@ -350,3 +350,17 @@ pub fn error_message(message: &str) {
         );
     }
 }
+
+pub fn success_message(message: &str) {
+    let title = CString::new("Patching").unwrap();
+    let message = CString::new(message).unwrap();
+
+    unsafe {
+        winapi::um::winuser::MessageBoxA(
+            std::ptr::null_mut(),
+            message.as_ptr(),
+            title.as_ptr(),
+            0x40,
+        );
+    }
+}

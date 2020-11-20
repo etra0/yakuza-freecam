@@ -1,6 +1,6 @@
 pub mod globals;
 
-use common::external::{Camera, error_message};
+use common::external::{Camera, error_message, success_message};
 use crate::globals::*;
 use memory_rs::internal::memory::Detour;
 use memory_rs::internal::process_info::ProcessInfo;
@@ -196,7 +196,26 @@ impl<T> Inject for Vec<T> where T: Inject {
     }
 }
 
+#[cfg(not(feature = "ms_store"))]
+fn nope_ui_elements(proc_inf: &ProcessInfo) -> Vec<UIElement> {
+    vec![
+            UIElement::new(proc_inf.addr + 0x2829C88),
+            UIElement::new(proc_inf.addr + 0x2829C8C),
+            UIElement::new(proc_inf.addr + 0x2829CAC),
+        ]
+}
+
+#[cfg(feature = "ms_store")]
+fn nope_ui_elements(proc_inf: &ProcessInfo) -> Vec<UIElement> {
+    vec![]
+}
+
+
 fn patch(_: LPVOID) -> Result<()> {
+    #[cfg(feature = "non_automatic")]
+    success_message("The injection was made succesfully");
+
+    #[cfg(debug_assertions)]
     unsafe {
         use winapi::um::consoleapi::AllocConsole;
         try_winapi!(AllocConsole());
@@ -210,12 +229,7 @@ fn patch(_: LPVOID) -> Result<()> {
     let mut active = false;
     let mut current_speed = 1_f32;
 
-    let mut original_ui: Option<Vec<u32>> = None;
-    let mut ui_elements: Vec<UIElement> = vec![
-        UIElement::new(proc_inf.addr + 0x2829C88),
-        UIElement::new(proc_inf.addr + 0x2829C8C),
-        UIElement::new(proc_inf.addr + 0x2829CAC),
-    ];
+    let mut ui_elements: Vec<UIElement> = nope_ui_elements(&proc_inf);
 
     info!("Starting main loop");
 
@@ -223,7 +237,7 @@ fn patch(_: LPVOID) -> Result<()> {
         xinput_get_state(&mut xs)?;
         let gp = xs.Gamepad;
 
-        if (gp.wButtons & (0x40 | 0x80)) == (0x40 | 0x80) {
+        if (gp.wButtons & (0x200 | 0x80)) == (0x200 | 0x80) {
             active = !active;
             println!("Camera is {}", active);
             unsafe {
@@ -240,17 +254,18 @@ fn patch(_: LPVOID) -> Result<()> {
             std::thread::sleep(std::time::Duration::from_millis(500));
         }
 
-        if (gp.wButtons & 0x100) == 0x100 {
+        if (gp.wButtons & 0x4) == 0x4 {
             current_speed -= 0.01;
             if current_speed < 1e-4 {
                 current_speed = 1e-4;
             }
         }
 
-        if (gp.wButtons & 0x200) == 0x200 {
+        if (gp.wButtons & 0x8) == 0x8 {
             current_speed += 0.01;
         }
 
+        #[cfg(debug_assertions)]
         if (gp.wButtons & (0x1000 | 0x4000)) == (0x1000 | 0x4000) {
             info!("Exiting main loop");
             unsafe {
@@ -319,8 +334,9 @@ fn patch(_: LPVOID) -> Result<()> {
 
     std::thread::sleep(std::time::Duration::from_secs(2));
 
-    info!("Freeing console");
+    #[cfg(debug_assertions)]
     unsafe {
+        info!("Freeing console");
         use winapi::um::wincon::FreeConsole;
         try_winapi!(FreeConsole());
     }
