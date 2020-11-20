@@ -8,8 +8,13 @@ edition = "2018"
 
 [dependencies]
 common = { path = "../common" }
-memory-rs = { path = "../../memory-rs"}
+
+# own libs
+memory-rs = { git = "https://github.com/etra0/memory-rs"}
+simple_injector = { git = "https://github.com/etra0/simple_injector" }
+
 winapi = { version = "0.3.8", features = ["winuser", "xinput"] }
+
 # Loggin dependencies
 slog = { version = "2.5", features = ["max_level_trace", "release_max_level_warn"] }
 slog-term = { version = "2.5" }
@@ -17,8 +22,8 @@ slog-async = { version = "2.5" }
 slog-stdlog = { version = "4.1" }
 slog-scope = { version = "4.3" }
 log = { version = "0.4.11" }
-simple_injector = { path = "../../simple_injector" }
 
+anyhow = "1.0"
 
 nalgebra-glm = "0.3"
 
