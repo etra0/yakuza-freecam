@@ -7,18 +7,11 @@ use crate::globals::*;
 use memory_rs::internal::injections::*;
 use memory_rs::internal::process_info::ProcessInfo;
 use memory_rs::{try_winapi, generate_aob_pattern};
-use std::fs::OpenOptions;
 use std::io::prelude::*;
 use winapi::shared::minwindef::LPVOID;
-use winapi;
 
 use log::{error, info};
-use slog::Drain;
-use slog::o;
-use slog;
-use slog_scope;
-use slog_stdlog;
-use slog_term;
+use simplelog::*;
 
 #[repr(C)]
 struct GameCamera {
@@ -71,21 +64,12 @@ impl std::fmt::Debug for GameCamera {
 pub unsafe extern "system" fn wrapper(lib: LPVOID) -> u32 {
     // Logging initialization
     {
-        let log_path = "ylad.log";
-        let file = OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(log_path)
-            .unwrap();
-
-        let decorator = slog_term::PlainSyncDecorator::new(file);
-        let drain = slog_term::FullFormat::new(decorator).build().fuse();
-        let logger = slog::Logger::root(drain, o!());
-
-        let _guard = slog_scope::set_global_logger(logger);
-
-        slog_stdlog::init().unwrap();
+        CombinedLogger::init(
+            vec![
+                TermLogger::new(log::LevelFilter::Info, Config::default(), TerminalMode::Mixed),
+                WriteLogger::new(log::LevelFilter::Info, Config::default(), std::fs::File::create("ylad.log").unwrap())
+            ]
+        ).unwrap();
 
         match patch(lib) {
             Ok(_) => {
