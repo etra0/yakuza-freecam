@@ -165,6 +165,7 @@ fn nope_ui_elements(proc_inf: &ProcessInfo) -> Vec<StaticElement> {
 }
 
 
+#[allow(unreachable_code)]
 fn patch(_: LPVOID) -> Result<()> {
     #[cfg(feature = "non_automatic")]
     success_message("The injection was made succesfully");
@@ -190,6 +191,7 @@ fn patch(_: LPVOID) -> Result<()> {
         handle_controller(&mut input);
         input.sanitize();
 
+        #[cfg(debug_assertions)]
         if input.deattach {
             break;
         }
