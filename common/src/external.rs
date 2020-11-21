@@ -2,6 +2,8 @@ use memory_rs::external::process::Process;
 use nalgebra_glm as glm;
 use std::rc::Rc;
 use winapi::um::winuser;
+use winapi;
+use std::ffi::CString;
 
 const CARGO_VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 const GIT_VERSION: Option<&'static str> = option_env!("GIT_VERSION");
@@ -92,7 +94,7 @@ impl Camera {
     }
 
     /// Calculates the new lookAt using spherical coordinates.
-    fn calc_new_focus_point(
+    pub fn calc_new_focus_point(
         cam_x: f32,
         cam_z: f32,
         cam_y: f32,
@@ -332,5 +334,33 @@ impl Camera {
             self.process
                 .write_aob(injection.entry_point, &injection.f_orig, false);
         }
+    }
+}
+
+pub fn error_message(message: &str) {
+    let title = CString::new("Error while patching").unwrap();
+    let message = CString::new(message).unwrap();
+
+    unsafe {
+        winapi::um::winuser::MessageBoxA(
+            std::ptr::null_mut(),
+            message.as_ptr(),
+            title.as_ptr(),
+            0x10,
+        );
+    }
+}
+
+pub fn success_message(message: &str) {
+    let title = CString::new("Patching").unwrap();
+    let message = CString::new(message).unwrap();
+
+    unsafe {
+        winapi::um::winuser::MessageBoxA(
+            std::ptr::null_mut(),
+            message.as_ptr(),
+            title.as_ptr(),
+            0x40,
+        );
     }
 }

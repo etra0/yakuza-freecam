@@ -5,40 +5,53 @@ on:
     branches:
       - "dev"
 
-jobs:
-  build-release:
-    name: "Build Dev Version"
-    runs-on: "windows-latest"
+    jobs:
+      build-release:
+        name: "Build Dev Version"
+        runs-on: "windows-latest"
 
-    steps:
-      - name: "Checkout source code"
-        uses: "actions/checkout@v1"
-        with:
-          submodules: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+        steps:
+          - name: "Checkout source code"
+            uses: "actions/checkout@v1"
+            with:
+              submodules: true
+              token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: "Set current version"
-        run: echo "GIT_VERSION=$(git.exe rev-parse --short HEAD)" >> $env:GITHUB_ENV
+          - name: "Set current version"
+            run: echo "GIT_VERSION=$(git.exe rev-parse --short HEAD)" >> $env:GITHUB_ENV
 
-      - name: "Build Yakuza 0"
-        run: |
-          cargo.exe build -p yakuza0 --release
+          - name: "Build Yakuza 0"
+            run: |
+              cargo.exe build -p yakuza0 --release
 
-      - name: "Build Yakuza Kiwami"
-        run: |
-          cargo.exe build -p kiwami --release
+          - name: "Build Yakuza Kiwami"
+            run: |
+              cargo.exe build -p kiwami --release
 
-      - name: "Build Yakuza Kiwami 2"
-        run: |
-          cargo.exe build -p kiwami2 --release
+          - name: "Build Yakuza Kiwami 2"
+            run: |
+              cargo.exe build -p kiwami2 --release
 
-      - name: "Automatic Release"
-        uses: "marvinpinto/action-automatic-releases@latest"
-        with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "dev_release"
-          prerelease: true
-          title: "Latest release"
-          files: |
-            target/release/*.exe
+          - name: "Build Yakuza Like a Dragon"
+            run: |
+              cd likeadragon/
+              cargo.exe build -p likeadragon --release --features non_automatic
+              cd ../
+
+          - name: "Pack Yakuza Like a Dragon build"
+            run: |
+              tar.exe -a -c -f likeadragon-freecam.zip target/release/likeadragon.dll target/release/likeadragon-freecam.exe
+
+          - name: "Automatic Release"
+            uses: "marvinpinto/action-automatic-releases@latest"
+            with:
+              repo_token: "${{ secrets.GITHUB_TOKEN }}"
+              automatic_release_tag: "dev_release"
+              prerelease: true
+              title: "Latest release"
+              files: |
+                target/release/yakuza0-freecam.exe
+                target/release/kiwami-freecam.exe
+                target/release/kiwami2-freecam.exe
+                likeadragon-freecam.zip
 

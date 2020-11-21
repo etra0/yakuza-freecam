@@ -1,4 +1,4 @@
-use common::common::{get_version, Camera, Injection};
+use common::external::{get_version, Camera, Injection};
 use memory_rs::external::process::Process;
 use std::f32;
 use std::io::Error;
