@@ -1,14 +1,15 @@
 pub mod globals;
 
+use anyhow::{Context, Result};
 use common::external::{Camera, error_message, success_message};
-use memory_rs::internal::injections::*;
+use common::internal::{Input, handle_controller};
 use crate::globals::*;
+use memory_rs::internal::injections::*;
 use memory_rs::internal::process_info::ProcessInfo;
 use memory_rs::{try_winapi, generate_aob_pattern};
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 use winapi::shared::minwindef::LPVOID;
-use winapi::um::xinput;
 use winapi;
 
 use log::{error, info};
@@ -19,9 +20,6 @@ use slog_scope;
 use slog_stdlog;
 use slog_term;
 
-// TODO: remove this
-type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-
 #[repr(C)]
 struct GameCamera {
     pos: [f32; 4],
@@ -29,6 +27,32 @@ struct GameCamera {
     rot: [f32; 4],
     padding_: [f32; 0x8],
     fov: f32
+}
+
+impl GameCamera {
+    pub fn consume_input(&mut self, input: &Input) {
+        let r_cam_x = self.focus[0] - self.pos[0];
+        let r_cam_y = self.focus[1] - self.pos[1];
+        let r_cam_z = self.focus[2] - self.pos[2];
+
+        let (r_cam_x, r_cam_z, r_cam_y) =
+            Camera::calc_new_focus_point(r_cam_x, r_cam_z, r_cam_y,
+                input.delta_focus.0, input.delta_focus.1);
+
+        self.pos[0] = self.pos[0] + r_cam_x*input.delta_pos.1 +
+            input.delta_pos.0*r_cam_z;
+        self.pos[1] = self.pos[1] + r_cam_y*input.delta_pos.1;
+
+        self.pos[2] = self.pos[2] + r_cam_z*input.delta_pos.1 -
+            input.delta_pos.0*r_cam_x;
+
+        self.focus[0] = self.pos[0] + r_cam_x;
+        self.focus[1] = self.pos[1] + r_cam_y;
+        self.focus[2] = self.pos[2] + r_cam_z;
+
+        println!("{:p} ; {}", &self, input.engine_speed);
+        self.fov = input.fov;
+    }
 }
 
 impl std::fmt::Debug for GameCamera {
@@ -99,19 +123,27 @@ fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
     let mut detours = vec![];
 
     unsafe {
-        let pat = generate_aob_pattern![0x90, 0xC5, 0xF8, 0x10, 0x07, 0xC5,
-            0xF8, 0x11, 0x86, 0x80, 0x00, 0x00, 0x00];
+        let pat = generate_aob_pattern![
+            0x90, 0xC5, 0xF8, 0x10, 0x07, 0xC5, 0xF8, 0x11, 0x86, 0x80, 0x00,
+            0x00, 0x00
+        ];
+
         let camera_func = Detour::new_from_aob(pat, proc_inf,
             auto_cast!(get_camera_data), Some(&mut _get_camera_data), 15,
-            Some(-0x33))?;
+            Some(-0x33))
+            .with_context(|| "camera_func failed")?;
 
         info!("camera_func found: {:x}", camera_func.entry_point);
         detours.push(camera_func);
 
-        let pat = generate_aob_pattern![0xC5, 0x7A, 0x11, 0x05, 0xC2, 0x32,
-            0xF8, 0x01, 0xC5, 0xFA, 0x11, 0x35, 0xBE, 0x32, 0xF8, 0x01];
+        let pat = generate_aob_pattern![
+            0xC5, 0x7A, 0x11, 0x05, 0xC2, 0x32, 0xF8, 0x01, 0xC5, 0xFA, 0x11,
+            0x35, 0xBE, 0x32, 0xF8, 0x01
+        ];
+
         let timestop_func = Detour::new_from_aob(pat, proc_inf,
-            auto_cast!(get_timestop), Some(&mut _get_timestop), 16, None)?;
+            auto_cast!(get_timestop), Some(&mut _get_timestop), 16, None)
+            .with_context(|| "timestop couldn't be found")?;
 
         info!("timestop_func found: {:x}", timestop_func.entry_point);
         detours.push(timestop_func);
@@ -128,55 +160,11 @@ fn make_injections(proc_inf: &ProcessInfo) -> Result<Vec<Injection>> {
         generate_aob_pattern![
             0x89, 0x86, 0xD0, 0x00, 0x00, 0x00, 0x8B, 0x47,
             0x54, 0x89, 0x86, 0xD4, 0x00, 0x00, 0x00
-    ])?;
+    ]).with_context(|| "FoV couldn't be found")?;
 
     v.push(fov);
     Ok(v)
 }
-
-// Asume safety of XInputGameState
-fn xinput_get_state(xinput_state: &mut xinput::XINPUT_STATE) -> Result<()> {
-    use xinput::XInputGetState;
-    let xinput_wrapper = |xs: &mut xinput::XINPUT_STATE| -> u32 {
-        let res = unsafe { XInputGetState(0, xs) };
-        if res == 0 {
-            return 1;
-        }
-        error_message(&format!("Xinput failed: {}", res));
-        return 0;
-    };
-
-    try_winapi!(
-        xinput_wrapper(xinput_state)
-    );
-
-    Ok(())
-}
-
-pub struct Input {
-    pub engine_speed: f32,
-    // Deltas with X and Y
-    pub delta_pos: (f32, f32),
-    pub delta_focus: (f32, f32),
-
-    pub delta_altitude: f32,
-
-    pub change_active: bool,
-}
-
-impl Input {
-    pub fn new() -> Input {
-        Input {
-            engine_speed: 1.,
-            delta_pos: (0., 0.),
-            delta_focus: (0., 0.),
-            delta_altitude: 0.,
-            change_active: false
-        }
-    }
-}
-
-
 
 #[cfg(not(feature = "ms_store"))]
 fn nope_ui_elements(proc_inf: &ProcessInfo) -> Vec<StaticElement> {
@@ -204,86 +192,54 @@ fn patch(_: LPVOID) -> Result<()> {
     }
 
     let proc_inf = ProcessInfo::new("YakuzaLikeADragon.exe")?;
-    let mut detours = inject_detourings(&proc_inf)?;
-
-    let mut xs: xinput::XINPUT_STATE = unsafe { std::mem::zeroed() };
 
     let mut active = false;
-    let mut current_speed = 1_f32;
 
+    let mut detours = inject_detourings(&proc_inf)?;
     let mut ui_elements: Vec<StaticElement> = nope_ui_elements(&proc_inf);
     let mut injections = make_injections(&proc_inf)?;
-    let mut fov = 1.;
+    let mut input = Input::new();
 
     info!("Starting main loop");
 
     loop {
-        xinput_get_state(&mut xs)?;
-        let gp = xs.Gamepad;
+        handle_controller(&mut input);
+        input.sanitize();
 
-        if (gp.wButtons & (0x200 | 0x80)) == (0x200 | 0x80) {
+        if input.deattach {
+            break;
+        }
+
+        if input.change_active {
             active = !active;
-            println!("Camera is {}", active);
-
             unsafe {
                 _camera_active = active as u8;
             }
-            current_speed = 1e-4;
+            println!("Camera is {}", active);
+
+            input.engine_speed = 1e-4;
+
             if active {
                 injections.inject();
             } else {
                 ui_elements.remove_injection();
+                injections.remove_injection();
+
+                // We need to set _camera_struct to 0 since 
+                // the camera struct can change depending on the scene.
                 unsafe {
                     _camera_struct = 0;
                 }
-                injections.remove_injection();
             }
 
+            input.change_active = false;
             std::thread::sleep(std::time::Duration::from_millis(500));
         }
 
-        if (gp.wButtons & 0x4) == 0x4 {
-            current_speed -= 0.01;
-            if current_speed < 1e-4 {
-                current_speed = 1e-4;
-            }
-        }
-
-        if (gp.wButtons & 0x8) == 0x8 {
-            current_speed += 0.01;
-        }
-
-        if (gp.bLeftTrigger > 150) {
-            fov -= 0.01;
-            if fov < 1e-3 {
-                fov = 0.01
-            }
-        }
-
-        if (gp.bRightTrigger > 150) {
-            fov += 0.01;
-            if fov > 3.12 {
-                fov = 3.12;
-            }
-        }
-
-        #[cfg(debug_assertions)]
-        if (gp.wButtons & (0x1000 | 0x4000)) == (0x1000 | 0x4000) {
-            info!("Exiting main loop");
-            unsafe {
-                _camera_active = 0;
-            }
-            break
-        }
-
         unsafe {
-            if _camera_struct == 0x0 {
+            if (_camera_struct == 0x0) || !active {
                 continue;
             }
-        }
-
-        if !active {
-            continue;
         }
 
         let gc = unsafe { (_camera_struct + 0x80) as *mut GameCamera };
@@ -294,37 +250,15 @@ fn patch(_: LPVOID) -> Result<()> {
         }
 
         unsafe {
-            _engine_speed = current_speed;
-            ui_elements.inject();
+            _engine_speed = input.engine_speed;
         }
-        let r_cam_x = unsafe { (*gc).focus[0] - (*gc).pos[0] };
-        let r_cam_y = unsafe { (*gc).focus[1] - (*gc).pos[1] };
-        let r_cam_z = unsafe { (*gc).focus[2] - (*gc).pos[2] };
-
-        let p_speed_x = -(gp.sThumbLX as f32) / ((i16::MAX as f32)*1e2);
-        let p_speed_y = (gp.sThumbLY as f32)  / ((i16::MAX as f32)*1e2);
-        let speed_x = (gp.sThumbRX as f32)    / ((i16::MAX as f32)*1e2);
-        let speed_y = -(gp.sThumbRY as f32)   / ((i16::MAX as f32)*1e2);
-
-        let (r_cam_x, r_cam_z, r_cam_y) =
-            Camera::calc_new_focus_point(r_cam_x, r_cam_z, r_cam_y,
-                speed_x, speed_y);
+        ui_elements.inject();
 
         unsafe {
-            (*gc).pos[0] = (*gc).pos[0] + r_cam_x*p_speed_y +
-                p_speed_x*r_cam_z;
-            (*gc).pos[1] = (*gc).pos[1] + r_cam_y*p_speed_y;
-
-            (*gc).pos[2] = (*gc).pos[2] + r_cam_z*p_speed_y -
-                p_speed_x*r_cam_x;
-
-            (*gc).focus[0] = (*gc).pos[0] + r_cam_x;
-            (*gc).focus[1] = (*gc).pos[1] + r_cam_y;
-            (*gc).focus[2] = (*gc).pos[2] + r_cam_z;
-
-            println!("{:?} ; {:x}, {}", (*gc), gp.wButtons, current_speed);
-            (*gc).fov = fov;
+            (*gc).consume_input(&input);
         }
+
+        input.reset();
 
         std::thread::sleep(std::time::Duration::from_millis(10));
     }
