@@ -29,7 +29,6 @@ cc = "1.0"
 
 [features]
 non_automatic = []
-ms_store = []
 
 [lib]
 crate-type = ["cdylib"]

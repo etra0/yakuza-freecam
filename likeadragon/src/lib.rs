@@ -5,6 +5,7 @@ use common::external::{Camera, error_message, success_message};
 use common::internal::{Input, handle_controller};
 use crate::globals::*;
 use memory_rs::internal::injections::*;
+use memory_rs::internal::memory::scan_aob;
 use memory_rs::internal::process_info::ProcessInfo;
 use memory_rs::{try_winapi, generate_aob_pattern};
 use std::io::prelude::*;
@@ -150,20 +151,28 @@ fn make_injections(proc_inf: &ProcessInfo) -> Result<Vec<Injection>> {
     Ok(v)
 }
 
-#[cfg(not(feature = "ms_store"))]
-fn nope_ui_elements(proc_inf: &ProcessInfo) -> Vec<StaticElement> {
-    vec![
-            StaticElement::new(proc_inf.addr + 0x2829C88),
-            StaticElement::new(proc_inf.addr + 0x2829C8C),
-            StaticElement::new(proc_inf.addr + 0x2829CAC),
-        ]
-}
+fn nope_ui_elements(proc_inf: &ProcessInfo) -> Result<Vec<StaticElement>> {
+    let (size, func) = generate_aob_pattern![
+        0xC5, 0xE8, 0x57, 0xD2, 0xC5, 0xF8, 0x57, 0xC0, 0x48, 0x8D, 0x54, 0x24,
+        0x20, 0xC5, 0xB0, 0x58, 0x08
+    ];
 
-#[cfg(feature = "ms_store")]
-fn nope_ui_elements(proc_inf: &ProcessInfo) -> Vec<StaticElement> {
-    vec![]
-}
+    let ptr = scan_aob(proc_inf.addr, proc_inf.size, func, size)?
+        .context("Couldn't find UI values")? + 0x11;
 
+    let offset = (ptr + 0x2) as *const u32;
+    let offset = unsafe { *offset };
+    let rip = ptr + 0x6;
+
+    let base_addr_for_static_numbers = rip + (offset as usize);
+    info!("base_addr_for_static_numbers: {:x}", base_addr_for_static_numbers);
+
+    Ok(vec![
+            StaticElement::new(base_addr_for_static_numbers),
+            StaticElement::new(base_addr_for_static_numbers + 0x4),
+            StaticElement::new(base_addr_for_static_numbers + 0x24),
+        ])
+}
 
 #[allow(unreachable_code)]
 fn patch(_: LPVOID) -> Result<()> {
@@ -181,7 +190,7 @@ fn patch(_: LPVOID) -> Result<()> {
     let mut active = false;
 
     let mut detours = inject_detourings(&proc_inf)?;
-    let mut ui_elements: Vec<StaticElement> = nope_ui_elements(&proc_inf);
+    let mut ui_elements: Vec<StaticElement> = nope_ui_elements(&proc_inf)?;
     let mut injections = make_injections(&proc_inf)?;
     let mut input = Input::new();
 
@@ -201,7 +210,7 @@ fn patch(_: LPVOID) -> Result<()> {
             unsafe {
                 _camera_active = active as u8;
             }
-            println!("Camera is {}", active);
+            info!("Camera is {}", active);
 
             input.engine_speed = 1e-4;
 
@@ -251,7 +260,7 @@ fn patch(_: LPVOID) -> Result<()> {
 
     std::io::stdout().flush()?;
 
-    println!("Dropping values");
+    info!("Dropping values");
     detours.clear();
 
     std::thread::sleep(std::time::Duration::from_secs(2));
