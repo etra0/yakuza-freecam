@@ -65,10 +65,12 @@ impl std::fmt::Debug for GameCamera {
 pub unsafe extern "system" fn wrapper(lib: LPVOID) -> u32 {
     // Logging initialization
     {
+        let mut path = std::env::temp_dir();
+        path.push("ylad.log");
         CombinedLogger::init(
             vec![
                 TermLogger::new(log::LevelFilter::Info, Config::default(), TerminalMode::Mixed),
-                WriteLogger::new(log::LevelFilter::Info, Config::default(), std::fs::File::create("ylad.log").unwrap())
+                WriteLogger::new(log::LevelFilter::Info, Config::default(), std::fs::File::create(path).unwrap())
             ]
         ).unwrap();
 
