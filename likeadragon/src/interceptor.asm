@@ -1,6 +1,9 @@
 .data
 EXTERN _get_camera_data: qword
+
 EXTERN _get_timestop: qword
+EXTERN _get_timestop_rip: qword
+EXTERN _get_timestop_first_offset: dword
 
 EXTERN _camera_struct: qword
 EXTERN _camera_active: byte
@@ -43,12 +46,23 @@ get_timestop PROC
     vmovss xmm3, _engine_speed
 
     @@:
-    mov rax, 143E529DCh
+    ; If _get_timestop_rip is 0 we can't start writing to the
+    ; right address
+    cmp _get_timestop_rip, 0
+    je @f
+    cmp _get_timestop_first_offset, 0
+    je @f
+
+    mov rax, _get_timestop_rip
+    add rax, 8h
+    add eax, _get_timestop_first_offset
     vmovss dword ptr [rax], xmm8
-    mov rax, 143E529E0h
+    add rax, 4h
     vmovss dword ptr [rax], xmm6
-    mov rax, 143E529ECh
+    add rax, 0Ch
     vmovss dword ptr [rax], xmm3
+
+    @@:
 
     pop rax
     popf

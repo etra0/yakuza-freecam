@@ -126,9 +126,15 @@ fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
             0x35, 0xBE, 0x32, 0xF8, 0x01
         ];
 
-        let timestop_func = Detour::new_from_aob(pat, proc_inf,
-            auto_cast!(get_timestop), Some(&mut _get_timestop), 16, None)
+        let timestop_ptr = scan_aob(proc_inf.addr, proc_inf.size, pat.1, pat.0)?
             .with_context(|| "timestop couldn't be found")?;
+        _get_timestop_rip = timestop_ptr;
+
+        _get_timestop_first_offset = *((timestop_ptr + 0x4) as *const u32);
+        info!("_get_timestop_first_offset: {:x}", _get_timestop_first_offset);
+
+        let timestop_func = Detour::new(timestop_ptr, 16,
+            auto_cast!(get_timestop), Some(&mut _get_timestop));
 
         info!("timestop_func found: {:x}", timestop_func.entry_point);
         detours.push(timestop_func);
