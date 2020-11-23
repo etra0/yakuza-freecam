@@ -3,7 +3,7 @@ EXTERN _get_camera_data: qword
 
 EXTERN _get_timestop: qword
 EXTERN _get_timestop_rip: qword
-EXTERN _get_timestop_first_offset: dword
+EXTERN _get_timestop_first_offset: qword
 
 EXTERN _camera_struct: qword
 EXTERN _camera_active: byte
@@ -55,7 +55,7 @@ get_timestop PROC
 
     mov rax, _get_timestop_rip
     add rax, 8h
-    add eax, _get_timestop_first_offset
+    add rax, _get_timestop_first_offset
     vmovss dword ptr [rax], xmm8
     add rax, 4h
     vmovss dword ptr [rax], xmm6

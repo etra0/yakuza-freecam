@@ -114,7 +114,7 @@ fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
         ];
 
         let camera_func = Detour::new_from_aob(pat, proc_inf,
-            auto_cast!(get_camera_data), Some(&mut _get_camera_data), 15,
+            auto_cast!(get_camera_data), Some(&mut _get_camera_data as *mut usize as usize), 15,
             Some(-0x33))
             .with_context(|| "camera_func failed")?;
 
@@ -122,25 +122,29 @@ fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
         detours.push(camera_func);
 
         let pat = generate_aob_pattern![
-            0xC5, 0x7A, 0x11, 0x05, 0xC2, 0x32, 0xF8, 0x01, 0xC5, 0xFA, 0x11,
-            0x35, 0xBE, 0x32, 0xF8, 0x01
+            0xC4, 0xE1, 0xFA, 0x2C, 0xC0, 0x89, 0x05, _, _, _, _, 0xC5, 0x7A,
+            0x11, 0x05, _, _, _, _
         ];
 
         let timestop_ptr = scan_aob(proc_inf.addr, proc_inf.size, pat.1, pat.0)?
-            .with_context(|| "timestop couldn't be found")?;
-        _get_timestop_rip = timestop_ptr;
+            .with_context(|| "timestop couldn't be found")? + 0xB;
 
-        _get_timestop_first_offset = *((timestop_ptr + 0x4) as *const u32);
+        _get_timestop_rip = timestop_ptr;
+        _get_timestop_first_offset = *((timestop_ptr + 0x4) as *const u32) as usize;
         info!("_get_timestop_first_offset: {:x}", _get_timestop_first_offset);
 
-        let timestop_func = Detour::new(timestop_ptr, 16,
-            auto_cast!(get_timestop), Some(&mut _get_timestop));
+        let timestop_func = Detour::new(
+            timestop_ptr, 16,
+            auto_cast!(get_timestop),
+            Some(&mut _get_timestop as *mut usize as usize)
+        );
 
         info!("timestop_func found: {:x}", timestop_func.entry_point);
         detours.push(timestop_func);
     }
 
-    info!("Injection completed succesfully");
+    detours.inject();
+    info!("injections completed succesfully");
     Ok(detours)
 }
 
@@ -198,6 +202,7 @@ fn patch(_: LPVOID) -> Result<()> {
     let mut detours = inject_detourings(&proc_inf)?;
     let mut ui_elements: Vec<StaticElement> = nope_ui_elements(&proc_inf)?;
     let mut injections = make_injections(&proc_inf)?;
+
     let mut input = Input::new();
 
     info!("Starting main loop");

@@ -11,7 +11,7 @@ scoped_no_mangle! {
     _get_camera_data: usize = 0x0;
     _get_timestop: usize = 0x0;
     _get_timestop_rip: usize = 0x0;
-    _get_timestop_first_offset: u32 = 0x0;
+    _get_timestop_first_offset: usize = 0x0;
 
     // Global engine speed to be written by the main dll
     _engine_speed: f32 = 1.;
