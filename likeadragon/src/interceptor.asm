@@ -42,7 +42,7 @@ get_timestop PROC
     cmp _camera_active, 0
     je @f
     vmovss xmm8, _engine_speed
-    ; vmovss xmm6, _engine_speed
+    vmovss xmm6, _engine_speed
     vmovss xmm3, _engine_speed
 
     @@:

@@ -14,11 +14,13 @@ use winapi::shared::minwindef::LPVOID;
 use log::{error, info};
 use simplelog::*;
 
+/// Structure parsed from the game.
 #[repr(C)]
 struct GameCamera {
     pos: [f32; 4],
     focus: [f32; 4],
     rot: [f32; 4],
+    /// We simply skip 8 values because we don't know what they are.
     padding_: [f32; 0x8],
     fov: f32
 }
@@ -44,7 +46,7 @@ impl GameCamera {
         self.focus[1] = self.pos[1] + r_cam_y;
         self.focus[2] = self.pos[2] + r_cam_z;
 
-        println!("{:p} ; {}", &self, input.engine_speed);
+        // println!("{:p} ; {}", &self, input.engine_speed);
         self.fov = input.fov;
     }
 }
@@ -163,7 +165,7 @@ fn make_injections(proc_inf: &ProcessInfo) -> Result<Vec<Injection>> {
     Ok(v)
 }
 
-fn nope_ui_elements(proc_inf: &ProcessInfo) -> Result<Vec<StaticElement>> {
+fn write_ui_elements(proc_inf: &ProcessInfo) -> Result<Vec<StaticElement>> {
     let (size, func) = generate_aob_pattern![
         0xC5, 0xE8, 0x57, 0xD2, 0xC5, 0xF8, 0x57, 0xC0, 0x48, 0x8D, 0x54, 0x24,
         0x20, 0xC5, 0xB0, 0x58, 0x08
@@ -202,7 +204,7 @@ fn patch(_: LPVOID) -> Result<()> {
     let mut active = false;
 
     let mut detours = inject_detourings(&proc_inf)?;
-    let mut ui_elements: Vec<StaticElement> = nope_ui_elements(&proc_inf)?;
+    let mut ui_elements: Vec<StaticElement> = write_ui_elements(&proc_inf)?;
     let mut injections = make_injections(&proc_inf)?;
 
     let mut input = Input::new();
@@ -226,7 +228,6 @@ fn patch(_: LPVOID) -> Result<()> {
             info!("Camera is {}", active);
 
             input.engine_speed = 1e-4;
-
             if active {
                 injections.inject();
             } else {
@@ -264,6 +265,7 @@ fn patch(_: LPVOID) -> Result<()> {
 
         unsafe {
             (*gc).consume_input(&input);
+            println!("{:?}", *gc);
         }
 
         input.reset();

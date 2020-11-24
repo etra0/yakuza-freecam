@@ -1,10 +1,12 @@
 use winapi::um::xinput;
 use memory_rs::try_winapi;
-use anyhow::{Result};
+use anyhow::Result;
 use crate::external::error_message;
 use log::{error, info};
 
 static mut WARNED_ALREADY: bool = false;
+
+const DEADZONE: i16 = 2000;
 
 pub struct Input {
     pub engine_speed: f32,
@@ -111,11 +113,21 @@ pub fn handle_controller(input: &mut Input) {
         input.fov += 0.01;
     }
 
-    input.delta_pos.0 = -(gp.sThumbLX as f32) / ((i16::MAX as f32)*1e2);
-    input.delta_pos.1 = (gp.sThumbLY as f32)  / ((i16::MAX as f32)*1e2);
+    macro_rules! dead_zone {
+        ($val:expr) => {
+            if ($val < DEADZONE) && ($val > -DEADZONE) {
+                0
+            } else {
+                $val
+            }
+        }
+    }
 
-    input.delta_focus.0 = (gp.sThumbRX as f32)  / ((i16::MAX as f32)*1e2);
-    input.delta_focus.1 = -(gp.sThumbRY as f32) / ((i16::MAX as f32)*1e2);
+    input.delta_pos.0 = -(dead_zone!(gp.sThumbLX) as f32) / ((i16::MAX as f32)*1e2);
+    input.delta_pos.1 = (dead_zone!(gp.sThumbLY) as f32)  / ((i16::MAX as f32)*1e2);
+
+    input.delta_focus.0 = (dead_zone!(gp.sThumbRX) as f32)  / ((i16::MAX as f32)*1e2);
+    input.delta_focus.1 = -(dead_zone!(gp.sThumbRY) as f32) / ((i16::MAX as f32)*1e2);
 
     #[cfg(debug_assertions)]
     if (gp.wButtons & (0x1000 | 0x4000)) == (0x1000 | 0x4000) {
