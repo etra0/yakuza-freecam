@@ -10,6 +10,7 @@ use memory_rs::internal::process_info::ProcessInfo;
 use memory_rs::{try_winapi, generate_aob_pattern};
 use std::io::prelude::*;
 use winapi::shared::minwindef::LPVOID;
+use winapi::um::xinput;
 
 use log::{error, info};
 use simplelog::*;
@@ -102,6 +103,21 @@ pub unsafe extern "system" fn wrapper(lib: LPVOID) -> u32 {
     0
 }
 
+#[no_mangle]
+pub unsafe extern "system" fn xinput_interceptor(index: u32, xs: &mut xinput::XINPUT_STATE) -> u32 {
+    let result = xinput::XInputGetState(index, xs);
+    // check if the pause button was pressed
+    let buttons = (*xs).Gamepad.wButtons & 0x10;
+
+    let mut gamepad: xinput::XINPUT_GAMEPAD = std::mem::zeroed();
+    gamepad.wButtons = buttons;
+    if _camera_active == 1 {
+        std::ptr::copy_nonoverlapping(&gamepad, &mut (*xs).Gamepad, 1);
+    }
+
+    return result;
+}
+
 fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
     macro_rules! auto_cast {
         ($val:expr) => {
@@ -112,19 +128,21 @@ fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
     let mut detours = vec![];
 
     unsafe {
+        // Find the camera func
         let pat = generate_aob_pattern![
             0x90, 0xC5, 0xF8, 0x10, 0x07, 0xC5, 0xF8, 0x11, 0x86, 0x80, 0x00,
             0x00, 0x00
         ];
 
         let camera_func = Detour::new_from_aob(pat, proc_inf,
-            auto_cast!(get_camera_data), Some(&mut _get_camera_data as *mut usize as usize), 15,
+            auto_cast!(get_camera_data), Some(&mut _get_camera_data), 15,
             Some(-0x33))
             .with_context(|| "camera_func failed")?;
 
         info!("camera_func found: {:x}", camera_func.entry_point);
         detours.push(camera_func);
 
+        // Find the timestop.
         let pat = generate_aob_pattern![
             0xC4, 0xE1, 0xFA, 0x2C, 0xC0, 0x89, 0x05, _, _, _, _, 0xC5, 0x7A,
             0x11, 0x05, _, _, _, _
@@ -140,11 +158,23 @@ fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
         let timestop_func = Detour::new(
             timestop_ptr, 16,
             auto_cast!(get_timestop),
-            Some(&mut _get_timestop as *mut usize as usize)
+            Some(&mut _get_timestop)
         );
 
         info!("timestop_func found: {:x}", timestop_func.entry_point);
         detours.push(timestop_func);
+
+        // Find controller blocker
+        let pat = generate_aob_pattern![
+            0xE8, _, _, _, _, 0x85, 0xC0, 0x0F, 0x85, _, _, _, _, 0x48, 0x8B, 0x44,
+            0x24, 0x26, 0x48, 0x8B, 0x8C, 0x24, 0xD0, 0x00, 0x00, 0x00
+        ];
+        let controller_blocker = Detour::new_from_aob(pat, proc_inf,
+            auto_cast!(get_controller), Some(&mut _get_controller), 15,
+            Some(-0x8))?;
+        info!("controller_blocker found: {:x}", controller_blocker.entry_point);
+        detours.push(controller_blocker);
+
     }
 
     detours.inject();
@@ -160,7 +190,7 @@ fn make_injections(proc_inf: &ProcessInfo) -> Result<Vec<Injection>> {
             0x89, 0x86, 0xD0, 0x00, 0x00, 0x00, 0x8B, 0x47,
             0x54, 0x89, 0x86, 0xD4, 0x00, 0x00, 0x00
     ]).with_context(|| "FoV couldn't be found")?;
-
+    info!("FoV was found at {:x}", fov.entry_point);
     v.push(fov);
     Ok(v)
 }

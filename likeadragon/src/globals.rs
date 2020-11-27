@@ -12,6 +12,7 @@ scoped_no_mangle! {
     _get_timestop: usize = 0x0;
     _get_timestop_rip: usize = 0x0;
     _get_timestop_first_offset: usize = 0x0;
+    _get_controller: usize = 0x0;
 
     // Global engine speed to be written by the main dll
     _engine_speed: f32 = 1.;
@@ -20,4 +21,5 @@ scoped_no_mangle! {
 extern "C" {
     pub static get_camera_data: u8;
     pub static get_timestop: u8;
+    pub static get_controller: u8;
 }

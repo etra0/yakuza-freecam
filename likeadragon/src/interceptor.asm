@@ -4,6 +4,9 @@ EXTERN _get_camera_data: qword
 EXTERN _get_timestop: qword
 EXTERN _get_timestop_rip: qword
 EXTERN _get_timestop_first_offset: qword
+EXTERN _get_controller: qword
+
+EXTERN xinput_interceptor: qword
 
 EXTERN _camera_struct: qword
 EXTERN _camera_active: byte
@@ -68,5 +71,15 @@ get_timestop PROC
     popf
     jmp [_get_timestop]
 get_timestop ENDP
+
+get_controller PROC
+    lea rdx, [rsp + 20h]
+    mov rsi, r8
+    lea rax, xinput_interceptor
+    call rax
+    test eax, eax
+
+    jmp [_get_controller]
+get_controller ENDP
 
 END

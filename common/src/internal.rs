@@ -90,6 +90,10 @@ pub fn handle_controller(input: &mut Input) {
         return;
     }
 
+    unsafe {
+        xinput::XInputEnable(1);
+    }
+
     let gp = xs.Gamepad;
 
     // check camera activation

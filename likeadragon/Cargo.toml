@@ -14,7 +14,7 @@ memory-rs = { git = "https://github.com/etra0/memory-rs"}
 # memory-rs = { path = "../../memory-rs" }
 simple_injector = { git = "https://github.com/etra0/simple_injector" }
 
-winapi = { version = "0.3.8", features = ["winuser", "xinput", "wincon", "consoleapi"] }
+winapi = { version = "0.3.8", features = ["winuser", "xinput", "wincon", "consoleapi", "minwindef"] }
 
 # Loggin dependencies
 simplelog = "0.8"
