@@ -229,7 +229,10 @@ fn patch(_: LPVOID) -> Result<()> {
         try_winapi!(AllocConsole());
     }
 
+    info!("Yakuza Like A Dragon freecam v{} by @etra0", common::external::get_version());
+
     let proc_inf = ProcessInfo::new(Some("YakuzaLikeADragon.exe"))?;
+    info!("{:x?}", proc_inf);
 
     let mut active = false;
 

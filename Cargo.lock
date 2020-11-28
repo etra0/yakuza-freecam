@@ -178,7 +178,7 @@ dependencies = [
 [[package]]
 name = "memory-rs"
 version = "0.1.4"
-source = "git+https://github.com/etra0/memory-rs#a548222be226a9ef06fc49eea402062fde78662f"
+source = "git+https://github.com/etra0/memory-rs#de836c6b35459dc303d8c0fa1e46613c7ef261c2"
 dependencies = [
  "anyhow",
  "winapi",
