@@ -177,8 +177,8 @@ dependencies = [
 
 [[package]]
 name = "memory-rs"
-version = "0.1.3"
-source = "git+https://github.com/etra0/memory-rs#ef2a4c4da0622020ae8a91b1fe477260b3176e43"
+version = "0.1.4"
+source = "git+https://github.com/etra0/memory-rs#a548222be226a9ef06fc49eea402062fde78662f"
 dependencies = [
  "anyhow",
  "winapi",
@@ -371,7 +371,7 @@ checksum = "b88fa983de7720629c9387e9f517353ed404164b1e482c970a90c1a4aaf7dc1a"
 [[package]]
 name = "simple_injector"
 version = "0.1.0"
-source = "git+https://github.com/etra0/simple_injector#d94132a147f9979e23fd8c6b111ca569d732068d"
+source = "git+https://github.com/etra0/simple_injector#dd41bed1598912adc9b3c1d2118182313bf62b9b"
 dependencies = [
  "memory-rs",
  "winapi",

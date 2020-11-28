@@ -229,7 +229,7 @@ fn patch(_: LPVOID) -> Result<()> {
         try_winapi!(AllocConsole());
     }
 
-    let proc_inf = ProcessInfo::new("YakuzaLikeADragon.exe")?;
+    let proc_inf = ProcessInfo::new(Some("YakuzaLikeADragon.exe"))?;
 
     let mut active = false;
 

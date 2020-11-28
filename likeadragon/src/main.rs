@@ -1,5 +1,5 @@
 use memory_rs::external::process::Process;
-use simple_injector::injector::inject_dll;
+use simple_injector::inject_dll;
 use std::env::current_exe;
 
 fn main() {
