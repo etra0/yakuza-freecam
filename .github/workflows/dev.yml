@@ -32,6 +32,21 @@ jobs:
         run: |
           cargo.exe build -p kiwami2 --release
 
+      - name: "Build Yakuza Like a Dragon"
+        run: |
+          cd likeadragon/lib
+          cargo.exe build --release --features non_automatic
+          cd ../../
+          cd likeadragon/injector
+          cargo.exe build --release
+          cd ../../
+
+      - name: "Pack Yakuza Like a Dragon build"
+        run: |
+          Copy target/release/likeadragon.dll ./likeadragon.dll
+          Copy target/release/likeadragon-freecam.exe ./likeadragon-freecam.exe
+          tar.exe -a -c -f likeadragon-freecam.zip ./likeadragon.dll ./likeadragon-freecam.exe
+
       - name: "Automatic Release"
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
@@ -40,5 +55,8 @@ jobs:
           prerelease: true
           title: "Latest release"
           files: |
-            target/release/*.exe
+            target/release/yakuza0-freecam.exe
+            target/release/kiwami-freecam.exe
+            target/release/kiwami2-freecam.exe
+            likeadragon-freecam.zip
 

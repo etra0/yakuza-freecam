@@ -1,5 +1,5 @@
-use common::common::{get_version, Camera, Injection};
-use memory_rs::process::process_wrapper::Process;
+use common::external::{get_version, Camera, Injection};
+use memory_rs::external::process::Process;
 use std::f32;
 use std::io::Error;
 use std::rc::Rc;

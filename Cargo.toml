@@ -3,5 +3,7 @@ members = [
   "common",
   "yakuza0",
   "kiwami",
-  "kiwami2"
+  "kiwami2",
+  "likeadragon/lib",
+  "likeadragon/injector"
 ]
