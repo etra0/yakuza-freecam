@@ -4,5 +4,6 @@ members = [
   "yakuza0",
   "kiwami",
   "kiwami2",
-  "likeadragon"
+  "likeadragon/lib",
+  "likeadragon/injector"
 ]

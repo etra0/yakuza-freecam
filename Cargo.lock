@@ -158,6 +158,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "likeadragon-freecam"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "memory-rs",
+ "simple_injector",
+ "winres",
+]
+
+[[package]]
 name = "log"
 version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"

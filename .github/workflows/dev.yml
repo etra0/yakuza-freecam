@@ -34,9 +34,12 @@ jobs:
 
       - name: "Build Yakuza Like a Dragon"
         run: |
-          cd likeadragon/
-          cargo.exe build -p likeadragon --release --features non_automatic
-          cd ../
+          cd likeadragon/lib
+          cargo.exe build --release --features non_automatic
+          cd ../../
+          cd likeadragon/injector
+          cargo.exe build --release
+          cd ../../
 
       - name: "Pack Yakuza Like a Dragon build"
         run: |
