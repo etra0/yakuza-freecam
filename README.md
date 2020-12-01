@@ -57,4 +57,14 @@ Yakuza Kiwami 2:
 cargo build -p kiwami2 --release
 ```
 
+# Thanks
 
+I want to give some special thanks to:
+- [@Olivier__Cesar](https://twitter.com/Olivier__Cesar) for giving me some
+  special support & sponsorship (seriously, thanks!)
+- Every supporter at Ko-Fi. For real, thanks a lot!
+- [@Miko_M2](https://twitter.com/Miko_M2) for the support in Ko-Fi and also the icon of the Kiwami 2 freecam.
+- [Timo654](https://github.com/Timo654) for the support in Ko-Fi and also the icon of Yakuza 0 freecam.
+- Galen#5628 for the icon of the Yakuza Like A Dragon freecam.
+- [Yakuza Modding Community](https://discord.gg/7HCGNCYp3V) for being a cool
+  community and giving lots of support and testing.
