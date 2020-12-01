@@ -3,7 +3,16 @@ use simple_injector::inject_dll;
 use std::env::current_exe;
 
 fn main() {
-    let p = Process::new("YakuzaLikeADragon.exe").unwrap();
+    println!("Waiting for the process to start");
+    let p = loop {
+        match Process::new("YakuzaLikeADragon.exe") {
+            Ok(p) => break p,
+            Err(_) => ()
+        };
+        std::thread::sleep(std::time::Duration::from_secs(5));
+    };
+    println!("Game found");
+
     let mut path = current_exe().unwrap();
     path.pop();
     let path_string = path.to_string_lossy();

@@ -1,8 +1,7 @@
 use winapi::um::xinput;
 use memory_rs::try_winapi;
 use anyhow::Result;
-use crate::external::error_message;
-use log::{error, info};
+use log::info;
 
 static mut WARNED_ALREADY: bool = false;
 
