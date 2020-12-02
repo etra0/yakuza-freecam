@@ -10,6 +10,7 @@ use memory_rs::internal::process_info::ProcessInfo;
 use memory_rs::{try_winapi, generate_aob_pattern};
 use std::io::prelude::*;
 use winapi::shared::minwindef::LPVOID;
+use winapi::um::winuser::{self, GetAsyncKeyState};
 use winapi::um::xinput;
 
 use log::{error, info};
@@ -249,7 +250,7 @@ fn patch(_: LPVOID) -> Result<()> {
         input.sanitize();
 
         #[cfg(debug_assertions)]
-        if input.deattach {
+        if input.deattach || (unsafe { GetAsyncKeyState(winuser::VK_HOME) } as u32 & 0x8000) != 0 {
             break;
         }
 
