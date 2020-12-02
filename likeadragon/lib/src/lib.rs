@@ -12,6 +12,7 @@ use std::io::prelude::*;
 use winapi::shared::minwindef::LPVOID;
 use winapi::um::winuser::{self, GetAsyncKeyState};
 use winapi::um::xinput;
+use std::sync::atomic::Ordering;
 
 use log::{error, info};
 use simplelog::*;
@@ -104,9 +105,25 @@ pub unsafe extern "system" fn wrapper(lib: LPVOID) -> u32 {
     0
 }
 
+pub fn use_xinput_from_game(index: u32, xs: &mut xinput::XINPUT_STATE) -> u32 {
+    let mut xstate: xinput::XINPUT_STATE = unsafe { std::mem::zeroed() };
+    let function_pointer = controller_input_function.load(Ordering::Relaxed);
+
+    if function_pointer == 0 {
+        unsafe { std::ptr::copy_nonoverlapping(&xstate, xs, 1) };
+        return 0;
+    }
+
+    let func: fn(u32, &mut xinput::XINPUT_STATE) -> u32 = unsafe { std::mem::transmute(function_pointer as *const u8) };
+
+    let res = func(index, xs);
+
+    res
+}
+
 #[no_mangle]
 pub unsafe extern "system" fn xinput_interceptor(index: u32, xs: &mut xinput::XINPUT_STATE) -> u32 {
-    let result = xinput::XInputGetState(index, xs);
+    let result = use_xinput_from_game(index, xs);
     // check if the pause button was pressed
     let buttons = (*xs).Gamepad.wButtons & 0x10;
 
@@ -170,9 +187,15 @@ fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
             0xE8, _, _, _, _, 0x85, 0xC0, 0x0F, 0x85, _, _, _, _, 0x48, 0x8B, 0x44,
             0x24, 0x26, 0x48, 0x8B, 0x8C, 0x24, 0xD0, 0x00, 0x00, 0x00
         ];
+
         let controller_blocker = Detour::new_from_aob(pat, proc_inf,
             auto_cast!(get_controller), Some(&mut _get_controller), 15,
             Some(-0x8))?;
+
+        let original_function_p = controller_blocker.entry_point + 0x8;
+        let function_pointer = *((original_function_p + 0x1) as *const u32) as usize + original_function_p;
+        controller_input_function.store(function_pointer, Ordering::Relaxed);
+
         info!("controller_blocker found: {:x}", controller_blocker.entry_point);
         detours.push(controller_blocker);
 
@@ -246,7 +269,7 @@ fn patch(_: LPVOID) -> Result<()> {
     info!("Starting main loop");
 
     loop {
-        handle_controller(&mut input);
+        handle_controller(&mut input, use_xinput_from_game);
         input.sanitize();
 
         #[cfg(debug_assertions)]

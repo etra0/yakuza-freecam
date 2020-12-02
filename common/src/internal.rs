@@ -59,39 +59,9 @@ impl Input {
     }
 }
 
-// Asume safety of XInputGameState
-fn xinput_get_state(xinput_state: &mut xinput::XINPUT_STATE) -> Result<()> {
-    use xinput::XInputGetState;
-    let xinput_wrapper = |xs: &mut xinput::XINPUT_STATE| -> u32 {
-        let res = unsafe { XInputGetState(0, xs) };
-        if res == 0 {
-            return 1;
-        }
-        return 0;
-    };
-
-    try_winapi!(
-        xinput_wrapper(xinput_state)
-    );
-
-    Ok(())
-}
-
-pub fn handle_controller(input: &mut Input) {
+pub fn handle_controller(input: &mut Input, func: fn(u32, &mut xinput::XINPUT_STATE) -> u32) {
     let mut xs: xinput::XINPUT_STATE = unsafe { std::mem::zeroed() };
-    if xinput_get_state(&mut xs).is_err() {
-        unsafe {
-            if !WARNED_ALREADY {
-                info!("Controller was not detected on first try");
-                WARNED_ALREADY = true;
-            }
-        }
-        return;
-    }
-
-    unsafe {
-        xinput::XInputEnable(1);
-    }
+    func(0, &mut xs);
 
     let gp = xs.Gamepad;
 

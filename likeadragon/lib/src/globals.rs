@@ -1,4 +1,5 @@
 use memory_rs::scoped_no_mangle;
+use std::sync::atomic::AtomicUsize;
 
 scoped_no_mangle! {
     // Pointer to the camera struct (the lookat is at +0x80 offset
@@ -17,6 +18,8 @@ scoped_no_mangle! {
     // Global engine speed to be written by the main dll
     _engine_speed: f32 = 1.;
 }
+
+pub static controller_input_function: AtomicUsize = AtomicUsize::new(0);
 
 extern "C" {
     pub static get_camera_data: u8;
