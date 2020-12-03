@@ -1,29 +1,29 @@
 .data
-EXTERN _get_camera_data: qword
+EXTERN g_get_camera_data: qword
 
-EXTERN _get_timestop: qword
-EXTERN _get_timestop_rip: qword
-EXTERN _get_timestop_first_offset: qword
-EXTERN _get_controller: qword
+EXTERN g_get_timestop: qword
+EXTERN g_get_timestop_rip: qword
+EXTERN g_get_timestop_first_offset: qword
+EXTERN g_get_controller: qword
 
 EXTERN xinput_interceptor: qword
 
-EXTERN _camera_struct: qword
-EXTERN _camera_active: byte
-EXTERN _engine_speed: dword
+EXTERN g_camera_struct: qword
+EXTERN g_camera_active: byte
+EXTERN g_engine_speed: dword
 
 ; Function that intercepts the values written into the camera
 .code
-get_camera_data PROC
+asm_get_camera_data PROC
     pushf
-    mov al, _camera_active
+    mov al, g_camera_active
 
-    cmp _camera_active, 0
+    cmp g_camera_active, 0
     je original
 
-    cmp _camera_struct, 0
+    cmp g_camera_struct, 0
     jne force_ret
-    mov _camera_struct, rcx
+    mov g_camera_struct, rcx
 
     force_ret:
     popf
@@ -34,31 +34,31 @@ get_camera_data PROC
     push rdi
     sub rsp, 40h
     mov qword ptr [rsp + 20h], 0FFFFFFFFFFFFFFFEh
-    jmp qword ptr [_get_camera_data]
+    jmp qword ptr [g_get_camera_data]
 
-get_camera_data ENDP
+asm_get_camera_data ENDP
 
-get_timestop PROC
+asm_get_timestop PROC
     pushf
     push rax
-    mov al, _camera_active
-    cmp _camera_active, 0
+    mov al, g_camera_active
+    cmp g_camera_active, 0
     je @f
-    vmovss xmm8, _engine_speed
-    vmovss xmm6, _engine_speed
-    vmovss xmm3, _engine_speed
+    vmovss xmm8, g_engine_speed
+    vmovss xmm6, g_engine_speed
+    vmovss xmm3, g_engine_speed
 
     @@:
-    ; If _get_timestop_rip is 0 we can't start writing to the
+    ; If g_get_timestop_rip is 0 we can't start writing to the
     ; right address
-    cmp _get_timestop_rip, 0
+    cmp g_get_timestop_rip, 0
     je @f
-    cmp _get_timestop_first_offset, 0
+    cmp g_get_timestop_first_offset, 0
     je @f
 
-    mov rax, _get_timestop_rip
+    mov rax, g_get_timestop_rip
     add rax, 8h
-    add rax, _get_timestop_first_offset
+    add rax, g_get_timestop_first_offset
     vmovss dword ptr [rax], xmm8
     add rax, 4h
     vmovss dword ptr [rax], xmm6
@@ -69,17 +69,17 @@ get_timestop PROC
 
     pop rax
     popf
-    jmp [_get_timestop]
-get_timestop ENDP
+    jmp [g_get_timestop]
+asm_get_timestop ENDP
 
-get_controller PROC
+asm_get_controller PROC
     lea rdx, [rsp + 20h]
     mov rsi, r8
     lea rax, xinput_interceptor
     call rax
     test eax, eax
 
-    jmp [_get_controller]
-get_controller ENDP
+    jmp [g_get_controller]
+asm_get_controller ENDP
 
 END

@@ -1,9 +1,4 @@
 use winapi::um::xinput;
-use memory_rs::try_winapi;
-use anyhow::Result;
-use log::info;
-
-static mut WARNED_ALREADY: bool = false;
 
 const DEADZONE: i16 = 2000;
 

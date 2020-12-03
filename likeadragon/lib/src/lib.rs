@@ -106,7 +106,7 @@ pub unsafe extern "system" fn wrapper(lib: LPVOID) -> u32 {
 }
 
 pub fn use_xinput_from_game(index: u32, xs: &mut xinput::XINPUT_STATE) -> u32 {
-    let mut xstate: xinput::XINPUT_STATE = unsafe { std::mem::zeroed() };
+    let xstate: xinput::XINPUT_STATE = unsafe { std::mem::zeroed() };
     let function_pointer = controller_input_function.load(Ordering::Relaxed);
 
     if function_pointer == 0 {
@@ -129,7 +129,7 @@ pub unsafe extern "system" fn xinput_interceptor(index: u32, xs: &mut xinput::XI
 
     let mut gamepad: xinput::XINPUT_GAMEPAD = std::mem::zeroed();
     gamepad.wButtons = buttons;
-    if _camera_active == 1 {
+    if g_camera_active == 1 {
         std::ptr::copy_nonoverlapping(&gamepad, &mut (*xs).Gamepad, 1);
     }
 
@@ -153,7 +153,7 @@ fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
         ];
 
         let camera_func = Detour::new_from_aob(pat, proc_inf,
-            auto_cast!(get_camera_data), Some(&mut _get_camera_data), 15,
+            auto_cast!(asm_get_camera_data), Some(&mut g_get_camera_data), 15,
             Some(-0x33))
             .with_context(|| "camera_func failed")?;
 
@@ -169,14 +169,14 @@ fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
         let timestop_ptr = scan_aob(proc_inf.addr, proc_inf.size, pat.1, pat.0)?
             .with_context(|| "timestop couldn't be found")? + 0xB;
 
-        _get_timestop_rip = timestop_ptr;
-        _get_timestop_first_offset = *((timestop_ptr + 0x4) as *const u32) as usize;
-        info!("_get_timestop_first_offset: {:x}", _get_timestop_first_offset);
+        g_get_timestop_rip = timestop_ptr;
+        g_get_timestop_first_offset = *((timestop_ptr + 0x4) as *const u32) as usize;
+        info!("_get_timestop_first_offset: {:x}", g_get_timestop_first_offset);
 
         let timestop_func = Detour::new(
             timestop_ptr, 16,
-            auto_cast!(get_timestop),
-            Some(&mut _get_timestop)
+            auto_cast!(asm_get_timestop),
+            Some(&mut g_get_timestop)
         );
 
         info!("timestop_func found: {:x}", timestop_func.entry_point);
@@ -189,7 +189,7 @@ fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
         ];
 
         let controller_blocker = Detour::new_from_aob(pat, proc_inf,
-            auto_cast!(get_controller), Some(&mut _get_controller), 15,
+            auto_cast!(asm_get_controller), Some(&mut g_get_controller), 15,
             Some(-0x8))?;
 
         let original_function_p = controller_blocker.entry_point + 0x8;
@@ -280,7 +280,7 @@ fn patch(_: LPVOID) -> Result<()> {
         if input.change_active {
             active = !active;
             unsafe {
-                _camera_active = active as u8;
+                g_camera_active = active as u8;
             }
             info!("Camera is {}", active);
 
@@ -291,10 +291,10 @@ fn patch(_: LPVOID) -> Result<()> {
                 ui_elements.remove_injection();
                 injections.remove_injection();
 
-                // We need to set _camera_struct to 0 since 
+                // We need to set g_camera_struct to 0 since 
                 // the camera struct can change depending on the scene.
                 unsafe {
-                    _camera_struct = 0;
+                    g_camera_struct = 0;
                 }
             }
 
@@ -303,12 +303,12 @@ fn patch(_: LPVOID) -> Result<()> {
         }
 
         unsafe {
-            if (_camera_struct == 0x0) || !active {
+            if (g_camera_struct == 0x0) || !active {
                 continue;
             }
         }
 
-        let gc = unsafe { (_camera_struct + 0x80) as *mut GameCamera };
+        let gc = unsafe { (g_camera_struct + 0x80) as *mut GameCamera };
         let rot = [0., 1., 0.];
         unsafe {
             std::ptr::copy_nonoverlapping(rot.as_ptr(), (*gc).rot.as_mut_ptr(),
@@ -316,7 +316,7 @@ fn patch(_: LPVOID) -> Result<()> {
         }
 
         unsafe {
-            _engine_speed = input.engine_speed;
+            g_engine_speed = input.engine_speed;
         }
         ui_elements.inject();
 
