@@ -49,7 +49,6 @@ impl GameCamera {
         self.focus[1] = self.pos[1] + r_cam_y;
         self.focus[2] = self.pos[2] + r_cam_z;
 
-        // println!("{:p} ; {}", &self, input.engine_speed);
         self.fov = input.fov;
     }
 }
@@ -105,6 +104,10 @@ pub unsafe extern "system" fn wrapper(lib: LPVOID) -> u32 {
     0
 }
 
+/// `use_xinput_from_game` is in charge to check if the pointer 
+/// `controller_input_function` is already setted. If the pointer is different
+/// from zero, it will actually use the function, if it doesn't, will return
+/// an empty `XINPUT_STATE` struct.
 pub fn use_xinput_from_game(index: u32, xs: &mut xinput::XINPUT_STATE) -> u32 {
     let xstate: xinput::XINPUT_STATE = unsafe { std::mem::zeroed() };
     let function_pointer = controller_input_function.load(Ordering::Relaxed);
@@ -121,14 +124,24 @@ pub fn use_xinput_from_game(index: u32, xs: &mut xinput::XINPUT_STATE) -> u32 {
     res
 }
 
+/// This function will be injected in the game, with the purpose of overriding
+/// the input getter. This function will use `use_xinput_from_game` to get
+/// the input. It'll also check if the camera is active, in the case it is,
+/// it will block all input except the pause button because when you alt-tab
+/// in the game, the game will pause.
 #[no_mangle]
 pub unsafe extern "system" fn xinput_interceptor(index: u32, xs: &mut xinput::XINPUT_STATE) -> u32 {
     let result = use_xinput_from_game(index, xs);
+
+    if g_camera_active == 0 {
+        return result;
+    }
     // check if the pause button was pressed
     let buttons = (*xs).Gamepad.wButtons & 0x10;
 
     let mut gamepad: xinput::XINPUT_GAMEPAD = std::mem::zeroed();
     gamepad.wButtons = buttons;
+
     if g_camera_active == 1 {
         std::ptr::copy_nonoverlapping(&gamepad, &mut (*xs).Gamepad, 1);
     }
@@ -136,6 +149,7 @@ pub unsafe extern "system" fn xinput_interceptor(index: u32, xs: &mut xinput::XI
     return result;
 }
 
+/// In charge of doing all the `Detour` injections type.
 fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
     macro_rules! auto_cast {
         ($val:expr) => {
@@ -146,7 +160,7 @@ fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
     let mut detours = vec![];
 
     unsafe {
-        // Find the camera func
+        // ---- Camera func ----
         let pat = generate_aob_pattern![
             0x90, 0xC5, 0xF8, 0x10, 0x07, 0xC5, 0xF8, 0x11, 0x86, 0x80, 0x00,
             0x00, 0x00
@@ -159,8 +173,9 @@ fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
 
         info!("camera_func found: {:x}", camera_func.entry_point);
         detours.push(camera_func);
+        // ----
 
-        // Find the timestop.
+        // ---- Timestop ----
         let pat = generate_aob_pattern![
             0xC4, 0xE1, 0xFA, 0x2C, 0xC0, 0x89, 0x05, _, _, _, _, 0xC5, 0x7A,
             0x11, 0x05, _, _, _, _
@@ -181,8 +196,9 @@ fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
 
         info!("timestop_func found: {:x}", timestop_func.entry_point);
         detours.push(timestop_func);
+        // ----
 
-        // Find controller blocker
+        // ---- Controller handler
         let pat = generate_aob_pattern![
             0xE8, _, _, _, _, 0x85, 0xC0, 0x0F, 0x85, _, _, _, _, 0x48, 0x8B, 0x44,
             0x24, 0x26, 0x48, 0x8B, 0x8C, 0x24, 0xD0, 0x00, 0x00, 0x00
@@ -192,8 +208,9 @@ fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
             auto_cast!(asm_get_controller), Some(&mut g_get_controller), 15,
             Some(-0x8))?;
 
-        let original_function_p = controller_blocker.entry_point + 0x8;
-        let function_pointer = *((original_function_p + 0x1) as *const u32) as usize + original_function_p;
+        let controller_blocker_rip = controller_blocker.entry_point + 0x8;
+        let controller_blocker_offset = *((controller_blocker_rip + 0x1) as *const u32) as usize;
+        let function_pointer = controller_blocker_rip + controller_blocker_offset;
         controller_input_function.store(function_pointer, Ordering::Relaxed);
 
         info!("controller_blocker found: {:x}", controller_blocker.entry_point);
@@ -206,6 +223,7 @@ fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
     Ok(detours)
 }
 
+/// In charge of making all the `Injection` type of injections.
 fn make_injections(proc_inf: &ProcessInfo) -> Result<Vec<Injection>> {
     let mut v = vec![];
 
@@ -216,6 +234,15 @@ fn make_injections(proc_inf: &ProcessInfo) -> Result<Vec<Injection>> {
     ]).with_context(|| "FoV couldn't be found")?;
     info!("FoV was found at {:x}", fov.entry_point);
     v.push(fov);
+
+    let no_ui = Injection::new_from_aob(proc_inf, vec![0xC3],
+        generate_aob_pattern![
+            0x40, 0x55, 0x48, 0x83, 0xEC, 0x20, 0x80, 0xBA, 0xD4, 0x01, 0x00, 0x00, 0x00, 0x48,
+            0x8B, 0xEA, 0x0F, 0x84, _, _, _, _
+        ]).with_context(|| "no_ui couldn't be found")?;
+    info!("no_ui was found at {:x}", no_ui.entry_point);
+    v.push(no_ui);
+
     Ok(v)
 }
 
@@ -255,7 +282,7 @@ fn patch(_: LPVOID) -> Result<()> {
 
     info!("Yakuza Like A Dragon freecam v{} by @etra0", common::external::get_version());
 
-    let proc_inf = ProcessInfo::new(Some("YakuzaLikeADragon.exe"))?;
+    let proc_inf = ProcessInfo::new(None)?;
     info!("{:x?}", proc_inf);
 
     let mut active = false;

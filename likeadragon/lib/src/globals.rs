@@ -20,6 +20,9 @@ scoped_no_mangle! {
     g_engine_speed: f32 = 1.;
 }
 
+/// This pointer will contain the function that either steam or 
+/// ms store version uses, since steam overrides the xinput in order
+/// to be able to use more controller options.
 pub static controller_input_function: AtomicUsize = AtomicUsize::new(0);
 
 extern "C" {
