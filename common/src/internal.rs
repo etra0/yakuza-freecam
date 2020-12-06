@@ -1,7 +1,9 @@
 use winapi::um::xinput;
 
 const DEADZONE: i16 = 2000;
+const MINIMUM_ENGINE_SPEED: f32 = 1e-3;
 
+#[derive(Default)]
 pub struct Input {
     pub engine_speed: f32,
     // Deltas with X and Y
@@ -19,13 +21,11 @@ pub struct Input {
 
 impl Input {
     pub fn new() -> Input {
-        let mut input: Input = unsafe { std::mem::zeroed() };
-        input.reset();
-
-        input.fov = 0.92;
-        input.engine_speed = 0.;
-
-        input
+        Self {
+            fov: 0.92,
+            engine_speed: MINIMUM_ENGINE_SPEED,
+            ..Input::default()
+        }
     }
 
     pub fn reset(&mut self) {
@@ -48,8 +48,8 @@ impl Input {
             self.fov = 3.12;
         }
 
-        if self.engine_speed < 1e-4 {
-            self.engine_speed = 1e-4;
+        if self.engine_speed < MINIMUM_ENGINE_SPEED {
+            self.engine_speed = MINIMUM_ENGINE_SPEED;
         }
     }
 }

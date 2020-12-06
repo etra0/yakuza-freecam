@@ -1,7 +1,7 @@
 extern crate winres;
 
 fn main() {
-    let mut res = winres::WindowsResource::new();
+    let res = winres::WindowsResource::new();
 
     println!("cargo:rerun-if-changed=interceptor.asm");
     println!("cargo:rustc-env=CARGO_CFG_TARGET_FEATURE=fxsr,sse,sse2,avx");

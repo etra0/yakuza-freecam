@@ -44,7 +44,7 @@ asm_get_timestop PROC
     mov al, g_camera_active
     cmp g_camera_active, 0
     je @f
-    vmovss xmm8, g_engine_speed
+    ; vmovss xmm8, g_engine_speed
     vmovss xmm6, g_engine_speed
     vmovss xmm3, g_engine_speed
 

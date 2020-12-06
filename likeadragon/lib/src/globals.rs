@@ -1,4 +1,5 @@
 #![allow(non_upper_case_globals)]
+
 use memory_rs::scoped_no_mangle;
 use std::sync::atomic::AtomicUsize;
 

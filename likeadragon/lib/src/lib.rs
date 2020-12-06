@@ -1,11 +1,11 @@
 pub mod globals;
 
 use anyhow::{Context, Result};
-use common::external::{Camera, error_message, success_message};
+use common::external::{Camera, error_message};
 use common::internal::{Input, handle_controller};
 use crate::globals::*;
 use memory_rs::internal::injections::*;
-use memory_rs::internal::memory::scan_aob;
+use memory_rs::internal::memory::{scan_aob, resolve_module_path};
 use memory_rs::internal::process_info::ProcessInfo;
 use memory_rs::{try_winapi, generate_aob_pattern};
 use std::io::prelude::*;
@@ -69,7 +69,7 @@ impl std::fmt::Debug for GameCamera {
 pub unsafe extern "system" fn wrapper(lib: LPVOID) -> u32 {
     // Logging initialization
     {
-        let mut path = std::env::temp_dir();
+        let mut path = resolve_module_path(lib as _).unwrap();
         path.push("ylad.log");
         CombinedLogger::init(
             vec![
@@ -272,7 +272,7 @@ fn write_ui_elements(proc_inf: &ProcessInfo) -> Result<Vec<StaticElement>> {
 #[allow(unreachable_code)]
 fn patch(_: LPVOID) -> Result<()> {
     #[cfg(feature = "non_automatic")]
-    success_message("The injection was made succesfully");
+    crate::common::external::success_message("The injection was made succesfully");
 
     #[cfg(debug_assertions)]
     unsafe {
@@ -311,7 +311,7 @@ fn patch(_: LPVOID) -> Result<()> {
             }
             info!("Camera is {}", active);
 
-            input.engine_speed = 1e-4;
+            input.engine_speed = 1e-3;
             if active {
                 injections.inject();
             } else {
