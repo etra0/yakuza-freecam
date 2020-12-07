@@ -318,7 +318,7 @@ fn write_ui_elements(proc_inf: &ProcessInfo) -> Result<Vec<StaticElement>> {
 #[allow(unreachable_code)]
 fn patch(_: LPVOID) -> Result<()> {
     #[cfg(feature = "non_automatic")]
-    crate::common::external::success_message("The injection was made succesfully");
+    common::external::success_message("The injection was made succesfully");
 
     #[cfg(debug_assertions)]
     unsafe {
