@@ -16,7 +16,7 @@ pub struct Input {
 
     pub fov: f32,
     #[cfg(debug_assertions)]
-    pub deattach: bool
+    pub deattach: bool,
 }
 
 impl Input {
@@ -36,7 +36,7 @@ impl Input {
 
         #[cfg(debug_assertions)]
         {
-        self.deattach = false;
+            self.deattach = false;
         }
     }
 
@@ -88,14 +88,14 @@ pub fn handle_controller(input: &mut Input, func: fn(u32, &mut xinput::XINPUT_ST
             } else {
                 $val
             }
-        }
+        };
     }
 
-    input.delta_pos.0 = -(dead_zone!(gp.sThumbLX) as f32) / ((i16::MAX as f32)*1e2);
-    input.delta_pos.1 = (dead_zone!(gp.sThumbLY) as f32)  / ((i16::MAX as f32)*1e2);
+    input.delta_pos.0 = -(dead_zone!(gp.sThumbLX) as f32) / ((i16::MAX as f32) * 1e2);
+    input.delta_pos.1 = (dead_zone!(gp.sThumbLY) as f32) / ((i16::MAX as f32) * 1e2);
 
-    input.delta_focus.0 = (dead_zone!(gp.sThumbRX) as f32)  / ((i16::MAX as f32)*1e2);
-    input.delta_focus.1 = -(dead_zone!(gp.sThumbRY) as f32) / ((i16::MAX as f32)*1e2);
+    input.delta_focus.0 = (dead_zone!(gp.sThumbRX) as f32) / ((i16::MAX as f32) * 1e2);
+    input.delta_focus.1 = -(dead_zone!(gp.sThumbRY) as f32) / ((i16::MAX as f32) * 1e2);
 
     #[cfg(debug_assertions)]
     if (gp.wButtons & (0x1000 | 0x4000)) == (0x1000 | 0x4000) {

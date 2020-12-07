@@ -1,9 +1,9 @@
 use memory_rs::external::process::Process;
 use nalgebra_glm as glm;
-use std::rc::Rc;
-use winapi::um::winuser;
-use winapi;
 use std::ffi::CString;
+use std::rc::Rc;
+use winapi;
+use winapi::um::winuser;
 
 const CARGO_VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 const GIT_VERSION: Option<&'static str> = option_env!("GIT_VERSION");
