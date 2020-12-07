@@ -3,16 +3,18 @@ use winapi::um::xinput;
 const DEADZONE: i16 = 2000;
 const MINIMUM_ENGINE_SPEED: f32 = 1e-3;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Input {
     pub engine_speed: f32,
     // Deltas with X and Y
     pub delta_pos: (f32, f32),
     pub delta_focus: (f32, f32),
+    pub delta_rotation: f32,
 
     pub delta_altitude: f32,
 
     pub change_active: bool,
+    pub is_active: bool,
 
     pub fov: f32,
     #[cfg(debug_assertions)]
@@ -65,12 +67,34 @@ pub fn handle_controller(input: &mut Input, func: fn(u32, &mut xinput::XINPUT_ST
         input.change_active = true;
     }
 
+    #[cfg(debug_assertions)]
+    if (gp.wButtons & (0x1000 | 0x4000)) == (0x1000 | 0x4000) {
+        input.deattach = true;
+    }
+
+    // Update the camera changes only if it's listening
+    if !input.is_active {
+        return;
+    }
+
     // modify speed
-    if (gp.wButtons & 0x4) == 0x4 {
+    if (gp.wButtons & 0x4) != 0 {
         input.engine_speed -= 0.01;
     }
-    if (gp.wButtons & 0x8) == 0x8 {
+    if (gp.wButtons & 0x8) != 0 {
         input.engine_speed += 0.01;
+    }
+
+    if (gp.wButtons & (0x200)) != 0 {
+        input.delta_rotation += 0.01;
+    }
+
+    if (gp.wButtons & (0x100)) != 0 {
+        input.delta_rotation -= 0.01;
+    }
+
+    if (gp.wButtons & (0x200 | 0x100)) == (0x200 | 0x100) {
+        input.delta_rotation = 0.;
     }
 
     if gp.bLeftTrigger > 150 {
@@ -97,8 +121,4 @@ pub fn handle_controller(input: &mut Input, func: fn(u32, &mut xinput::XINPUT_ST
     input.delta_focus.0 = (dead_zone!(gp.sThumbRX) as f32) / ((i16::MAX as f32) * 1e2);
     input.delta_focus.1 = -(dead_zone!(gp.sThumbRY) as f32) / ((i16::MAX as f32) * 1e2);
 
-    #[cfg(debug_assertions)]
-    if (gp.wButtons & (0x1000 | 0x4000)) == (0x1000 | 0x4000) {
-        input.deattach = true;
-    }
 }

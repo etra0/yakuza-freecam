@@ -14,6 +14,7 @@ use std::sync::atomic::Ordering;
 use winapi::shared::minwindef::LPVOID;
 use winapi::um::winuser::{self, GetAsyncKeyState};
 use winapi::um::xinput;
+use nalgebra_glm as glm;
 
 use log::{error, info};
 use simplelog::*;
@@ -51,6 +52,14 @@ impl GameCamera {
         self.focus[0] = self.pos[0] + r_cam_x;
         self.focus[1] = self.pos[1] + r_cam_y;
         self.focus[2] = self.pos[2] + r_cam_z;
+
+        let focus_ = glm::vec3(self.focus[0], self.focus[1], self.focus[2]);
+        let pos_ = glm::vec3(self.pos[0], self.pos[1], self.pos[2]);
+
+        let result = Camera::calculate_rotation(focus_, pos_, input.delta_rotation);
+        self.rot[0] = result[0];
+        self.rot[1] = result[1];
+        self.rot[2] = result[2];
 
         self.fov = input.fov;
     }
@@ -344,6 +353,7 @@ fn patch(_: LPVOID) -> Result<()> {
             break;
         }
 
+        input.is_active = active;
         if input.change_active {
             active = !active;
             unsafe {
@@ -376,10 +386,6 @@ fn patch(_: LPVOID) -> Result<()> {
         }
 
         let gc = unsafe { (g_camera_struct + 0x80) as *mut GameCamera };
-        let rot = [0., 1., 0.];
-        unsafe {
-            std::ptr::copy_nonoverlapping(rot.as_ptr(), (*gc).rot.as_mut_ptr(), 3);
-        }
 
         unsafe {
             g_engine_speed = input.engine_speed;
@@ -388,7 +394,7 @@ fn patch(_: LPVOID) -> Result<()> {
 
         unsafe {
             (*gc).consume_input(&input);
-            println!("{:?}", *gc);
+            println!("{:?}", input);
         }
 
         input.reset();
