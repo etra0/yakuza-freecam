@@ -5,10 +5,10 @@ use std::env::current_exe;
 fn main() {
     println!("Waiting for the process to start");
     let p = loop {
-        match Process::new("YakuzaLikeADragon.exe") {
-            Ok(p) => break p,
-            Err(_) => ()
-        };
+        if let Ok(p) = Process::new("YakuzaLikeADragon.exe") {
+            break p;
+        }
+
         std::thread::sleep(std::time::Duration::from_secs(5));
     };
     println!("Game found");
