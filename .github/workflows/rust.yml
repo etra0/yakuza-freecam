@@ -50,7 +50,7 @@ jobs:
         run: |
           Copy target/release/likeadragon.dll ./likeadragon.dll
           Copy target/release/likeadragon-freecam.exe ./likeadragon-freecam.exe
-          tar.exe -a -c -f likeadragon-freecam.zip ./likeadragon.dll ./likeadragon-freecam.exe
+          tar.exe -a -c -f likeadragon-freecam.zip likeadragon.dll likeadragon-freecam.exe
 
       - name: "Automatic Release"
         uses: "marvinpinto/action-automatic-releases@latest"
