@@ -9,12 +9,12 @@ use memory_rs::internal::injections::*;
 use memory_rs::internal::memory::{resolve_module_path, scan_aob};
 use memory_rs::internal::process_info::ProcessInfo;
 use memory_rs::{generate_aob_pattern, try_winapi};
+use nalgebra_glm as glm;
 use std::io::prelude::*;
 use std::sync::atomic::Ordering;
 use winapi::shared::minwindef::LPVOID;
 use winapi::um::winuser::{self, GetAsyncKeyState};
 use winapi::um::xinput;
-use nalgebra_glm as glm;
 
 use log::{error, info};
 use simplelog::*;
@@ -79,6 +79,11 @@ impl std::fmt::Debug for GameCamera {
 }
 
 pub unsafe extern "system" fn wrapper(lib: LPVOID) -> u32 {
+    #[cfg(debug_assertions)]
+    unsafe {
+        use winapi::um::consoleapi::AllocConsole;
+        AllocConsole();
+    }
     // Logging initialization
     {
         let mut path = resolve_module_path(lib as _).unwrap();
@@ -203,7 +208,8 @@ fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
             _
         ];
 
-        let timestop_ptr = scan_aob(proc_inf.addr, proc_inf.size, pat.1, pat.0)?
+        let region = &proc_inf.region;
+        let timestop_ptr = scan_aob(region.start_address, region.size, pat.1, pat.0)?
             .with_context(|| "timestop couldn't be found")?
             + 0xB;
 
@@ -285,6 +291,18 @@ fn make_injections(proc_inf: &ProcessInfo) -> Result<Vec<Injection>> {
     info!("no_ui was found at {:x}", no_ui.entry_point);
     v.push(no_ui);
 
+    let input_blocker = Injection::new_from_aob(
+        &proc_inf,
+        vec![0x90; 5],
+        generate_aob_pattern![
+            0xE8, _, _, _, _, 0x8B, 0x94, 0x24, 0x90, 0x01, 0x00, 0x00, 0x49, 0x8B, 0xCE, 0xE8, _,
+            _, _, _
+        ],
+    )
+    .with_context(|| "input_blocker couldn't be found")?;
+    info!("input_blocker found at {:x}", input_blocker.entry_point);
+    v.push(input_blocker);
+
     Ok(v)
 }
 
@@ -294,7 +312,8 @@ fn write_ui_elements(proc_inf: &ProcessInfo) -> Result<Vec<StaticElement>> {
         0x58, 0x08
     ];
 
-    let ptr = scan_aob(proc_inf.addr, proc_inf.size, func, size)?
+    let region = &proc_inf.region;
+    let ptr = scan_aob(region.start_address, region.size, func, size)?
         .context("Couldn't find UI values")?
         + 0x11;
 
@@ -320,11 +339,6 @@ fn patch(_: LPVOID) -> Result<()> {
     #[cfg(feature = "non_automatic")]
     common::external::success_message("The injection was made succesfully");
 
-    #[cfg(debug_assertions)]
-    unsafe {
-        use winapi::um::consoleapi::AllocConsole;
-        try_winapi!(AllocConsole());
-    }
 
     info!(
         "Yakuza Like A Dragon freecam v{} by @etra0",
@@ -406,8 +420,6 @@ fn patch(_: LPVOID) -> Result<()> {
 
     info!("Dropping values");
     detours.clear();
-
-    std::thread::sleep(std::time::Duration::from_secs(2));
 
     #[cfg(debug_assertions)]
     unsafe {
