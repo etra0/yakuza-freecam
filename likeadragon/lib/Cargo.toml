@@ -1,6 +1,6 @@
 [package]
 name = "likeadragon"
-version = "0.1.1"
+version = "0.1.0"
 authors = ["Sebastián Aedo <sebastian.aedo@sansano.usm.cl>"]
 edition = "2018"
 build = "build.rs"
