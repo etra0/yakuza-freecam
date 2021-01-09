@@ -32,6 +32,8 @@ Yakuza Like A Dragon:
 You should see a Command Prompt window with instructions. If one briefly flashes on the screen, or doesn't appear at all, you may need to open Command Prompt yourself and run it to see what went wrong.
 
 ## Usage YLAD:
+**You have to deactivate Motion Blur if you want to mess with the world paused**
+
 Currently, you can only use it with a controller (no keyboard support)
 - R1 + R3: Photo Mode Activation
 - Left/Right arrow: Change engine speed
