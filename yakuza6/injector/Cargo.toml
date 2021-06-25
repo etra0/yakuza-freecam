@@ -1,0 +1,19 @@
+[package]
+name = "yakuza6-freecam"
+version = "0.1.0"
+authors = ["Sebastián Aedo <sebastian.aedo@sansano.usm.cl>"]
+edition = "2018"
+build = "build.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# own libs
+memory-rs = { git = "https://github.com/etra0/memory-rs"}
+# memory-rs = { path = "../../memory-rs" }
+simple_injector = { git = "https://github.com/etra0/simple_injector" }
+yakuza6 = { path = "../lib" }
+
+[build-dependencies]
+winres = "0.1"
+cc = "1.0"

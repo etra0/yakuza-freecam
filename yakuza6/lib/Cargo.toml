@@ -1,0 +1,22 @@
+[package]
+name = "yakuza6"
+version = "0.1.0"
+authors = ["Sebastián Aedo <sebastian.aedo@sansano.usm.cl>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+memory-rs = { git = "https://github.com/etra0/memory-rs" }
+winapi = { version = "0.3", features = ["minwindef", "libloaderapi", "consoleapi", "wincon", "xinput"]}
+simplelog = "0.8"
+log = "0.4"
+nalgebra-glm = "0.3"
+termcolor = "1.1"
+
+[build-dependencies]
+winres = "0.1"
+cc = "1.0"
+
+[lib]
+crate-type = ["cdylib"]
