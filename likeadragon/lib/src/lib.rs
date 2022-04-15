@@ -6,7 +6,7 @@ use anyhow::{Context, Result};
 use common::external::{error_message, Camera};
 use common::internal::{handle_controller, Input};
 use memory_rs::internal::injections::*;
-use memory_rs::internal::memory::{resolve_module_path, scan_aob};
+use memory_rs::internal::memory::{resolve_module_path};
 use memory_rs::internal::process_info::ProcessInfo;
 use memory_rs::{generate_aob_pattern, try_winapi};
 use std::io::prelude::*;
@@ -185,13 +185,12 @@ fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
 
         let camera_func = Detour::new_from_aob(
             pat,
-            proc_inf,
+            &proc_inf.region,
             auto_cast!(asm_get_camera_data),
             Some(&mut g_get_camera_data),
             15,
-            Some(-0x33),
-        )
-        .with_context(|| "camera_func failed")?;
+            Some(-0x33)
+        ).with_context(|| "camera_func failed")?;
 
         info!("camera_func found: {:x}", camera_func.entry_point);
         detours.push(camera_func);
@@ -203,9 +202,8 @@ fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
             _
         ];
 
-        let timestop_ptr = scan_aob(proc_inf.addr, proc_inf.size, pat.1, pat.0)?
-            .with_context(|| "timestop couldn't be found")?
-            + 0xB;
+        let timestop_ptr = proc_inf.region.scan_aob(&pat)?.with_context(|| "timestop issues")? + 0xB;
+
 
         g_get_timestop_rip = timestop_ptr;
         g_get_timestop_first_offset = *((timestop_ptr + 0x4) as *const u32) as usize;
@@ -233,7 +231,7 @@ fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
 
         let controller_blocker = Detour::new_from_aob(
             pat,
-            proc_inf,
+            &proc_inf.region,
             auto_cast!(asm_get_controller),
             Some(&mut g_get_controller),
             15,
@@ -252,7 +250,7 @@ fn inject_detourings(proc_inf: &ProcessInfo) -> Result<Vec<Detour>> {
         detours.push(controller_blocker);
     }
 
-    detours.inject();
+    detours.iter_mut().inject();
     info!("injections completed succesfully");
     Ok(detours)
 }
@@ -262,7 +260,7 @@ fn make_injections(proc_inf: &ProcessInfo) -> Result<Vec<Injection>> {
     let mut v = vec![];
 
     let fov = Injection::new_from_aob(
-        proc_inf,
+        &proc_inf.region,
         vec![0x90; 6],
         generate_aob_pattern![
             0x89, 0x86, 0xD0, 0x00, 0x00, 0x00, 0x8B, 0x47, 0x54, 0x89, 0x86, 0xD4, 0x00, 0x00,
@@ -274,7 +272,7 @@ fn make_injections(proc_inf: &ProcessInfo) -> Result<Vec<Injection>> {
     v.push(fov);
 
     let no_ui = Injection::new_from_aob(
-        proc_inf,
+        &proc_inf.region,
         vec![0xC3],
         generate_aob_pattern![
             0x40, 0x55, 0x48, 0x83, 0xEC, 0x20, 0x80, 0xBA, 0xD4, 0x01, 0x00, 0x00, 0x00, 0x48,
@@ -289,12 +287,12 @@ fn make_injections(proc_inf: &ProcessInfo) -> Result<Vec<Injection>> {
 }
 
 fn write_ui_elements(proc_inf: &ProcessInfo) -> Result<Vec<StaticElement>> {
-    let (size, func) = generate_aob_pattern![
+    let pat = generate_aob_pattern![
         0xC5, 0xE8, 0x57, 0xD2, 0xC5, 0xF8, 0x57, 0xC0, 0x48, 0x8D, 0x54, 0x24, 0x20, 0xC5, 0xB0,
         0x58, 0x08
     ];
 
-    let ptr = scan_aob(proc_inf.addr, proc_inf.size, func, size)?
+    let ptr = proc_inf.region.scan_aob(&pat)?
         .context("Couldn't find UI values")?
         + 0x11;
 
@@ -363,10 +361,10 @@ fn patch(_: LPVOID) -> Result<()> {
 
             input.engine_speed = 1e-3;
             if active {
-                injections.inject();
+                injections.iter_mut().inject();
             } else {
-                ui_elements.remove_injection();
-                injections.remove_injection();
+                ui_elements.iter_mut().remove_injection();
+                injections.iter_mut().remove_injection();
 
                 // We need to set g_camera_struct to 0 since
                 // the camera struct can change depending on the scene.
@@ -390,7 +388,7 @@ fn patch(_: LPVOID) -> Result<()> {
         unsafe {
             g_engine_speed = input.engine_speed;
         }
-        ui_elements.inject();
+        ui_elements.iter_mut().inject();
 
         unsafe {
             (*gc).consume_input(&input);
