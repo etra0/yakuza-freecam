@@ -494,28 +494,3 @@ dependencies = [
  "winapi",
  "winres",
 ]
-
-[[package]]
-name = "yakuza6"
-version = "0.1.0"
-dependencies = [
- "cc",
- "log",
- "memory-rs",
- "nalgebra-glm",
- "simplelog",
- "termcolor",
- "winapi",
- "winres",
-]
-
-[[package]]
-name = "yakuza6-freecam"
-version = "0.1.0"
-dependencies = [
- "cc",
- "memory-rs",
- "simple_injector",
- "winres",
- "yakuza6",
-]

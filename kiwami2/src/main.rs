@@ -40,10 +40,10 @@ fn trigger_pause(process: &Process, addr: usize) {
 fn remove_ui(process: &Process, activate: bool) {
     let offsets: Vec<usize> = vec![0x291D1DC, 0x291D1D0, 0x291D1EC, 0x291D1E8, 0x291D1E4];
 
-    unsafe {
-        if ORIGINAL_VAL_UI[0] == 0 {
+    
+        if unsafe {ORIGINAL_VAL_UI[0] == 0} {
             for (i, offset) in offsets.iter().enumerate() {
-                ORIGINAL_VAL_UI[i] = process.read_value::<u32>(*offset, false);
+                unsafe { ORIGINAL_VAL_UI[i] = process.read_value::<u32>(*offset, false) };
             }
         }
 
@@ -51,10 +51,10 @@ fn remove_ui(process: &Process, activate: bool) {
             if activate {
                 process.write_value::<i32>(*offset, -1, false);
             } else {
-                process.write_value::<u32>(*offset, ORIGINAL_VAL_UI[i], false);
+                unsafe { process.write_value::<u32>(*offset, ORIGINAL_VAL_UI[i], false) };
             }
         }
-    }
+    
 }
 
 pub fn main() -> Result<(), Error> {
@@ -259,9 +259,9 @@ pub fn main() -> Result<(), Error> {
 
         // to scroll infinitely
         restart_mouse = !restart_mouse;
-        unsafe {
-            if detect_activation_by_controller(controller_state)
-                || ((GetAsyncKeyState(winuser::VK_PAUSE) as u32 & 0x8000) != 0)
+        
+            if unsafe {detect_activation_by_controller(controller_state)
+                || ((GetAsyncKeyState(winuser::VK_PAUSE) as u32 & 0x8000) != 0)}
             {
                 active = !active;
                 if !detect_activation_by_controller(controller_state) {
@@ -283,7 +283,7 @@ pub fn main() -> Result<(), Error> {
                 thread::sleep(Duration::from_millis(500));
             }
 
-            if (GetAsyncKeyState(winuser::VK_HOME) as u32 & 0x8000) != 0 {
+            if unsafe {(GetAsyncKeyState(winuser::VK_HOME) as u32 & 0x8000) != 0} {
                 active = !active;
                 capture_mouse = active;
 
@@ -301,7 +301,7 @@ pub fn main() -> Result<(), Error> {
                 thread::sleep(Duration::from_millis(500));
             }
 
-            if (GetAsyncKeyState(winuser::VK_END) as u32 & 0x8000) != 0 {
+            if unsafe {(GetAsyncKeyState(winuser::VK_END) as u32 & 0x8000) != 0} {
                 active = !active;
                 capture_mouse = active;
 
@@ -318,7 +318,7 @@ pub fn main() -> Result<(), Error> {
                 thread::sleep(Duration::from_millis(500));
             }
 
-            if active & (GetAsyncKeyState(winuser::VK_DELETE) as u32 & 0x8000 != 0) {
+            if unsafe {active & (GetAsyncKeyState(winuser::VK_DELETE) as u32 & 0x8000 != 0)} {
                 capture_mouse = !capture_mouse;
                 let c_status = if !capture_mouse {
                     "Deattached"
@@ -328,6 +328,6 @@ pub fn main() -> Result<(), Error> {
                 println!("status of mouse: {}", c_status);
                 thread::sleep(Duration::from_millis(500));
             }
-        }
+        
     }
 }
