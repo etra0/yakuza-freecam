@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 use winapi::shared::windef::POINT;
 use winapi::um::winuser;
 use winapi::um::winuser::{GetAsyncKeyState, GetCursorPos, SetCursorPos};
-
+use ctypes::c_int;
 const INITIAL_POS: i32 = 500;
 static mut ORIGINAL_VAL_UI: [u32; 5] = [0; 5];
 
@@ -260,8 +260,8 @@ pub fn main() -> Result<(), Error> {
         // to scroll infinitely
         restart_mouse = !restart_mouse;
         
-            if unsafe {detect_activation_by_controller(controller_state)
-                || ((GetAsyncKeyState(winuser::VK_PAUSE) as u32 & 0x8000) != 0)}
+            if detect_activation_by_controller(controller_state)
+                || GetAsyncKeyState_Not_Zero(winuser::VK_PAUSE)
             {
                 active = !active;
                 if !detect_activation_by_controller(controller_state) {
@@ -283,7 +283,7 @@ pub fn main() -> Result<(), Error> {
                 thread::sleep(Duration::from_millis(500));
             }
 
-            if unsafe {(GetAsyncKeyState(winuser::VK_HOME) as u32 & 0x8000) != 0} {
+            if GetAsyncKeyState_Not_Zero(winuser::VK_HOME) {
                 active = !active;
                 capture_mouse = active;
 
@@ -301,7 +301,7 @@ pub fn main() -> Result<(), Error> {
                 thread::sleep(Duration::from_millis(500));
             }
 
-            if unsafe {(GetAsyncKeyState(winuser::VK_END) as u32 & 0x8000) != 0} {
+            if GetAsyncKeyState_Not_Zero(winuser::VK_END) {
                 active = !active;
                 capture_mouse = active;
 
@@ -318,7 +318,7 @@ pub fn main() -> Result<(), Error> {
                 thread::sleep(Duration::from_millis(500));
             }
 
-            if unsafe {active & (GetAsyncKeyState(winuser::VK_DELETE) as u32 & 0x8000 != 0)} {
+            if active & GetAsyncKeyState_Not_Zero(winuser::VK_DELETE) {
                 capture_mouse = !capture_mouse;
                 let c_status = if !capture_mouse {
                     "Deattached"
@@ -330,4 +330,8 @@ pub fn main() -> Result<(), Error> {
             }
         
     }
+}
+
+fn GetAsyncKeyState_Not_Zero(vKey: c_int) -> bool {
+   unsafe { GetAsyncKeyState(vKey) as u32 & 0x8000 != 0 }
 }
