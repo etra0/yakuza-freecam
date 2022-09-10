@@ -179,9 +179,9 @@ pub fn main() -> Result<(), Error> {
 
         // to scroll infinitely
         restart_mouse = !restart_mouse;
-        unsafe {
-            if (controller_state & 0x11 == 0x11)
-                || (GetAsyncKeyState(winuser::VK_PAUSE) as u32 & 0x8000) != 0
+        
+            if unsafe {(controller_state & 0x11 == 0x11)
+                || (GetAsyncKeyState(winuser::VK_PAUSE) as u32 & 0x8000) != 0 }
             {
                 active = !active;
                 if controller_state & 0x11 != 0x11 {
@@ -198,7 +198,7 @@ pub fn main() -> Result<(), Error> {
                 thread::sleep(Duration::from_millis(500));
             }
 
-            if active & (GetAsyncKeyState(winuser::VK_DELETE) as u32 & 0x8000 != 0) {
+            if unsafe { active & (GetAsyncKeyState(winuser::VK_DELETE) as u32 & 0x8000 != 0) } {
                 capture_mouse = !capture_mouse;
                 let c_status = if !capture_mouse {
                     "Deattached"
@@ -209,8 +209,8 @@ pub fn main() -> Result<(), Error> {
                 thread::sleep(Duration::from_millis(500));
             }
 
-            if (controller_state & 0x14 == 0x14)
-                || (GetAsyncKeyState(winuser::VK_END) as u32 & 0x8000) != 0
+            if unsafe { (controller_state & 0x14 == 0x14)
+                || (GetAsyncKeyState(winuser::VK_END) as u32 & 0x8000) != 0 }
             {
                 pause_world = !pause_world;
                 println!("status of pausing: {}", pause_world);
@@ -221,6 +221,6 @@ pub fn main() -> Result<(), Error> {
                 }
                 thread::sleep(Duration::from_millis(500));
             }
-        }
+        
     }
 }
