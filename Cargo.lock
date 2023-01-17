@@ -113,6 +113,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "judgment"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cc",
+ "common",
+ "log",
+ "memory-rs",
+ "nalgebra-glm",
+ "simple_injector",
+ "simplelog",
+ "winapi",
+ "winres",
+]
+
+[[package]]
+name = "judgment-freecam"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "memory-rs",
+ "simple_injector",
+ "winres",
+]
+
+[[package]]
 name = "kiwami"
 version = "1.0.0"
 dependencies = [
@@ -493,29 +519,4 @@ dependencies = [
  "memory-rs",
  "winapi",
  "winres",
-]
-
-[[package]]
-name = "yakuza6"
-version = "0.1.0"
-dependencies = [
- "cc",
- "log",
- "memory-rs",
- "nalgebra-glm",
- "simplelog",
- "termcolor",
- "winapi",
- "winres",
-]
-
-[[package]]
-name = "yakuza6-freecam"
-version = "0.1.0"
-dependencies = [
- "cc",
- "memory-rs",
- "simple_injector",
- "winres",
- "yakuza6",
 ]

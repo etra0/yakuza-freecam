@@ -271,18 +271,6 @@ fn make_injections(proc_inf: &ProcessInfo) -> Result<Vec<Injection>> {
     info!("FoV was found at {:x}", fov.entry_point);
     v.push(fov);
 
-    let no_ui = Injection::new_from_aob(
-        &proc_inf.region,
-        vec![0xC3],
-        generate_aob_pattern![
-            0x40, 0x55, 0x48, 0x83, 0xEC, 0x20, 0x80, 0xBA, 0xD4, 0x01, 0x00, 0x00, 0x00, 0x48,
-            0x8B, 0xEA, 0x0F, 0x84, _, _, _, _
-        ],
-    )
-    .with_context(|| "no_ui couldn't be found")?;
-    info!("no_ui was found at {:x}", no_ui.entry_point);
-    v.push(no_ui);
-
     Ok(v)
 }
 
@@ -325,7 +313,7 @@ fn patch(_: LPVOID) -> Result<()> {
     }
 
     info!(
-        "Yakuza Like A Dragon freecam v{} by @etra0",
+        "Judgment freecam v{} by @etra0",
         common::external::get_version()
     );
 

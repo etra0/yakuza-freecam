@@ -5,5 +5,7 @@ members = [
   "kiwami",
   "kiwami2",
   "likeadragon/lib",
-  "likeadragon/injector"
+  "likeadragon/injector",
+  "judgment/lib",
+  "judgment/injector"
 ]
